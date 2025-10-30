@@ -9,6 +9,17 @@ import Profile from './components/Profile';
 import Home from './components/Home';
 import LessonForm from './components/LessonForm';
 import UserManagement from './components/UserManagement';
+import LessonManagement from './components/LessonManagement';
+import AdminDashboard from './components/AdminDashboard'; // Import AdminDashboard
+
+interface Lesson {
+  id: number;
+  title: string;
+  content: string;
+  code_example: string | null;
+  prefill_code: string | null;
+  test_code: string | null;
+}
 
 interface AuthContextType {
   isLoggedIn: boolean;
@@ -20,6 +31,8 @@ interface AuthContextType {
   setGlobalAlert: (message: string, type: 'success' | 'danger' | 'info' | 'warning') => void;
   isLoading: boolean;
   setGlobalLoading: (loading: boolean) => void;
+  allLessons: Lesson[]; // Add allLessons to context
+  setAllLessons: (lessons: Lesson[]) => void; // Add setAllLessons to context
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -57,16 +70,17 @@ function App() {
   const [globalMessage, setGlobalMessage] = useState<string | null>(null);
   const [globalMessageType, setGlobalMessageType] = useState<'success' | 'danger' | 'info' | 'warning'>('info');
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [allLessons, setAllLessons] = useState<Lesson[]>([]); // State to hold all lessons
 
-  const setGlobalAlert = (message: string, type: 'success' | 'danger' | 'info' | 'warning') => {
+  const setGlobalAlert = React.useCallback((message: string, type: 'success' | 'danger' | 'info' | 'warning') => {
     setGlobalMessage(message);
     setGlobalMessageType(type);
     setTimeout(() => setGlobalMessage(null), 5000); // Hide after 5 seconds
-  };
+  }, [setGlobalMessage, setGlobalMessageType]);
 
-  const setGlobalLoading = (loading: boolean) => {
+  const setGlobalLoading = React.useCallback((loading: boolean) => {
     setIsLoading(loading);
-  };
+  }, []);
 
   const fetchUserStatus = async () => {
     const token = localStorage.getItem('access_token');
@@ -97,7 +111,8 @@ function App() {
         setIsLoggedIn(false);
         setIsAdmin(false);
       }
-    } else {
+    }
+    else {
       setIsLoggedIn(false);
       setIsAdmin(false);
     }
@@ -105,6 +120,21 @@ function App() {
 
   useEffect(() => {
     fetchUserStatus();
+
+    const fetchAllLessons = async () => {
+      try {
+        const response = await fetch('http://localhost:8000/lessons/');
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data: Lesson[] = await response.json();
+        setAllLessons(data);
+      } catch (err) {
+        console.error("Error fetching all lessons in App.tsx:", err);
+      }
+    };
+
+    fetchAllLessons();
 
     const handleStorageChange = () => {
       fetchUserStatus();
@@ -118,7 +148,7 @@ function App() {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ isLoggedIn, isAdmin, setIsLoggedIn, setIsAdmin, globalMessage, globalMessageType, setGlobalAlert, isLoading, setGlobalLoading }}>
+    <AuthContext.Provider value={{ isLoggedIn, isAdmin, setIsLoggedIn, setIsAdmin, globalMessage, globalMessageType, setGlobalAlert, isLoading, setGlobalLoading, allLessons, setAllLessons }}>
       <Router>
         <div className="d-flex flex-column min-vh-100"> {/* Added flexbox for sticky footer */}
           <nav className="navbar navbar-expand-lg navbar-light bg-light">
@@ -139,12 +169,7 @@ function App() {
                   )}
                   {isLoggedIn && isAdmin && (
                     <li className="nav-item">
-                      <NavLink className="nav-link" to="/lessons/new">Create Lesson</NavLink>
-                    </li>
-                  )}
-                  {isLoggedIn && isAdmin && (
-                    <li className="nav-item">
-                      <NavLink className="nav-link" to="/admin/users">User Management</NavLink>
+                      <NavLink className="nav-link" to="/admin">Admin Dashboard</NavLink>
                     </li>
                   )}
                 </ul>
@@ -187,7 +212,12 @@ function App() {
               <Route path="/lessons/:id" element={<ProtectedRoute><LessonDetail /></ProtectedRoute>} />
               <Route path="/lessons/new" element={<ProtectedRoute adminOnly><LessonForm /></ProtectedRoute>} />
               <Route path="/lessons/:id/edit" element={<ProtectedRoute adminOnly><LessonForm /></ProtectedRoute>} />
+              
+              {/* Admin Routes */}
+              <Route path="/admin" element={<ProtectedRoute adminOnly><AdminDashboard /></ProtectedRoute>} />
               <Route path="/admin/users" element={<ProtectedRoute adminOnly><UserManagement /></ProtectedRoute>} />
+              <Route path="/admin/lessons" element={<ProtectedRoute adminOnly><LessonManagement /></ProtectedRoute>} />
+
               <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
             </Routes>
           </div>

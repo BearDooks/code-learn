@@ -16,6 +16,7 @@ const UserManagement: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [showEditModal, setShowEditModal] = useState<boolean>(false);
+  const [searchTerm, setSearchTerm] = useState<string>(''); // New state for search term
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -130,6 +131,11 @@ const UserManagement: React.FC = () => {
     }
   };
 
+  const filteredUsers = users.filter(user =>
+    user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (user.name && user.name.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
+
   if (!isLoggedIn) {
     return <div className="alert alert-warning mt-4">Please log in to view this page.</div>;
   }
@@ -151,6 +157,15 @@ const UserManagement: React.FC = () => {
   return (
     <div className="container mt-4">
       <h1>User Management</h1>
+      <div className="mb-3">
+        <input
+          type="text"
+          className="form-control"
+          placeholder="Search by email or name..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
+      </div>
       <table className="table table-striped">
         <thead>
           <tr>
@@ -163,19 +178,25 @@ const UserManagement: React.FC = () => {
           </tr>
         </thead>
         <tbody>
-          {users.map(user => (
-            <tr key={user.id}>
-              <td>{user.id}</td>
-              <td>{user.email}</td>
-              <td>{user.name || 'N/A'}</td>
-              <td>{user.is_active ? 'Yes' : 'No'}</td>
-              <td>{user.is_admin ? 'Yes' : 'No'}</td>
-              <td>
-                <button className="btn btn-sm btn-info me-2" onClick={() => handleEditClick(user)}>Edit</button>
-                <button className="btn btn-sm btn-danger" onClick={() => handleDeleteUser(user.id)}>Delete</button>
-              </td>
+          {filteredUsers.length > 0 ? (
+            filteredUsers.map(user => (
+              <tr key={user.id}>
+                <td>{user.id}</td>
+                <td>{user.email}</td>
+                <td>{user.name || 'N/A'}</td>
+                <td>{user.is_active ? 'Yes' : 'No'}</td>
+                <td>{user.is_admin ? 'Yes' : 'No'}</td>
+                <td>
+                  <button className="btn btn-sm btn-info me-2" onClick={() => handleEditClick(user)}>Edit</button>
+                  <button className="btn btn-sm btn-danger" onClick={() => handleDeleteUser(user.id)}>Delete</button>
+                </td>
+              </tr>
+            ))
+          ) : (
+            <tr>
+              <td colSpan={6} className="text-center">No users found.</td>
             </tr>
-          ))}
+          )}
         </tbody>
       </table>
 

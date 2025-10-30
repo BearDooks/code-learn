@@ -19,7 +19,7 @@ const LessonDetail: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
-  const { isAdmin, isLoggedIn, setGlobalLoading } = useAuth(); // Use useAuth hook
+  const { isAdmin, isLoggedIn, setGlobalLoading, allLessons } = useAuth(); // Use useAuth hook and get allLessons
 
   const [exerciseCode, setExerciseCode] = useState<string>(''); // Initialize with empty string
   const [exerciseOutput, setExerciseOutput] = useState<string>('Output will appear here.');
@@ -28,56 +28,72 @@ const LessonDetail: React.FC = () => {
   const [isLessonCompleted, setIsLessonCompleted] = useState<boolean>(false);
 
   useEffect(() => {
-    if (id) {
+    setGlobalLoading(true); // Show global loading indicator at the very beginning
+
+    const fetchLessonDetails = async () => {
+      if (!id) return;
+
       setLoading(true);
-      setGlobalLoading(true); // Show global loading indicator
-      fetch(`http://localhost:8000/lessons/${id}`)
-        .then(response => {
-          if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-          }
-          return response.json();
-        })
-        .then((data: Lesson) => {
-          setLesson(data);
-          setExerciseCode(data.prefill_code || '# Write your solution here'); // Set prefill code
-          setLoading(false);
+      try {
+        const response = await fetch(`http://localhost:8000/lessons/${id}`);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data: Lesson = await response.json();
+        setLesson(data);
+        setExerciseCode(data.prefill_code || '# Write your solution here'); // Set prefill code
+        setLoading(false);
 
-          if (isLoggedIn && data.id) {
-            const token = localStorage.getItem('access_token');
-            const tokenType = localStorage.getItem('token_type');
+        if (isLoggedIn && data.id) {
+          const token = localStorage.getItem('access_token');
+          const tokenType = localStorage.getItem('token_type');
 
-            if (token && tokenType) {
-              fetch(`http://localhost:8000/users/me/lessons/completed`, {
-                headers: {
-                  'Authorization': `${tokenType} ${token}`,
-                },
-              })
-              .then(response => response.json())
-              .then((completedLessons: Lesson[]) => {
-                const completed = completedLessons.some(cl => cl.id === data.id);
-                setIsLessonCompleted(completed);
-              })
-              .catch(err => console.error("Error fetching completed lessons:", err));
-            }
+          if (token && tokenType) {
+            fetch(`http://localhost:8000/users/me/lessons/completed`, {
+              headers: {
+                'Authorization': `${tokenType} ${token}`,
+              },
+            })
+            .then(response => response.json())
+            .then((completedLessons: Lesson[]) => {
+              const completed = completedLessons.some(cl => cl.id === data.id);
+              setIsLessonCompleted(completed);
+            })
+            .catch(err => console.error("Error fetching completed lessons:", err));
           }
-        })
-        .catch(error => {
-          console.error("Error fetching lesson:", error);
-          setError(error.message);
-          setLoading(false);
-        })
-        .finally(() => {
-          setGlobalLoading(false); // Hide global loading indicator
-        });
-    }
+        }
+      } catch (error: any) {
+        console.error("Error fetching lesson:", error);
+        setError(error.message);
+        setLoading(false);
+      } finally {
+        setGlobalLoading(false); // Hide global loading indicator after all fetches are done
+      }
+    };
+
+    fetchLessonDetails();
+
   }, [id, isLoggedIn, setGlobalLoading]); // Add setGlobalLoading to dependencies
 
   const handleEditClick = () => {
     navigate(`/lessons/${id}/edit`);
   };
 
+  const currentLessonIndex = allLessons.findIndex(lesson => lesson.id === Number(id));
+  const previousLesson = currentLessonIndex > 0 ? allLessons[currentLessonIndex - 1] : null;
+  const nextLesson = currentLessonIndex < allLessons.length - 1 ? allLessons[currentLessonIndex + 1] : null;
 
+  const handlePreviousLesson = () => {
+    if (previousLesson) {
+      navigate(`/lessons/${previousLesson.id}`);
+    }
+  };
+
+  const handleNextLesson = () => {
+    if (nextLesson) {
+      navigate(`/lessons/${nextLesson.id}`);
+    }
+  };
 
   const handleRunExerciseCode = async () => {
     if (!isLoggedIn) {
@@ -265,11 +281,25 @@ const LessonDetail: React.FC = () => {
           />
         </div>
         <button className="btn btn-primary mt-3" onClick={handleRunExerciseCode}>Run Exercise Code</button>
+        <button className="btn btn-secondary mt-3 ms-2" onClick={() => setExerciseCode(lesson?.prefill_code || '# Write your solution here')}>Reset Code</button>
         {exerciseError && <div className="alert alert-danger mt-3" role="alert">{exerciseError}</div>}
         <div className={`mt-3 p-3 border rounded ${exerciseOutput.includes("Tests passed") ? 'bg-success text-white' : 'bg-dark text-white'}`}>
           <h4>Output:</h4>
           <pre>{exerciseOutput}</pre>
         </div>
+      </div>
+
+      <div className="d-flex justify-content-between mt-4">
+        {previousLesson && (
+          <button className="btn btn-secondary" onClick={handlePreviousLesson}>
+            &larr; {previousLesson.title}
+          </button>
+        )}
+        {nextLesson && (
+          <button className="btn btn-primary ms-auto" onClick={handleNextLesson}>
+            {nextLesson.title} &rarr;
+          </button>
+        )}
       </div>
     </div>
   );
