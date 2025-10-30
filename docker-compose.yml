@@ -9,6 +9,12 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-code_learn_db}
       POSTGRES_USER: ${POSTGRES_USER:-user}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-user} -d ${POSTGRES_DB:-code_learn_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     ports:
       - "5432:5432" # Expose for local development/debugging, remove or restrict in production
 
@@ -23,7 +29,8 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-user}:${POSTGRES_PASSWORD:-password}@db:5432/${POSTGRES_DB:-code_learn_db}
       CODE_EXECUTOR_URL: http://code_executor:5000 # Assuming code executor runs on port 5000
     depends_on:
-      - db
+      db:
+        condition: service_healthy
       - code_executor # Backend depends on code_executor
 
   frontend:
