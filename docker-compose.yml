@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:13-alpine
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-code_learn_db}
+      POSTGRES_USER: ${POSTGRES_USER:-user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+    ports:
+      - "5432:5432" # Expose for local development/debugging, remove or restrict in production
+
+  backend:
+    build: ./backend
+    command: uvicorn main:app --host 0.0.0.0 --port 8000
+    volumes:
+      - ./backend:/app
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-user}:${POSTGRES_PASSWORD:-password}@db:5432/${POSTGRES_DB:-code_learn_db}
+      CODE_EXECUTOR_URL: http://code_executor:5000 # Assuming code executor runs on port 5000
+    depends_on:
+      - db
+      - code_executor # Backend depends on code_executor
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:80" # Map host port 3000 to container's port 80 (Nginx default)
+    depends_on:
+      - backend # Frontend depends on backend for API calls
+
+  code_executor:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.python-executor
+    # No ports exposed to host, as backend will communicate internally
+    # volumes:
+    #   - ./backend/executor_scripts:/app/executor_scripts # If there are specific scripts for execution
+    # command: python /app/executor_server.py # Command to start the executor server
+    environment:
+      # Any environment variables for the executor, e.g., resource limits
+      PYTHONUNBUFFERED: 1 # Ensure Python output is unbuffered
+    # Resource limits can be added here for security
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '0.5'
+    #       memory: 512M
+
+volumes:
+  postgres_data:

@@ -5,12 +5,17 @@ FROM python:3.9-slim-buster
 WORKDIR /app
 
 # Copy the current directory contents into the container at /app
-# This is where user code will be mounted/copied for execution
+# This is where user code will be mounted/copied for execution, and where executor_app.py will reside
 
 # Install any needed packages specified in requirements.txt
-# (We don't have one yet for the executor, but good practice)
-# COPY requirements.txt .
-# RUN pip install --no-cache-dir -r requirements.txt
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy the executor application
+COPY executor_app.py .
+
+# Clean up apt caches to reduce image size
+RUN rm -rf /var/lib/apt/lists/*
 
 # Command to run the Python script (this will be overridden by docker run command)
-CMD ["python", "-c", "print('No code provided.')"]
+CMD ["uvicorn", "executor_app:app", "--host", "0.0.0.0", "--port", "5000"]
