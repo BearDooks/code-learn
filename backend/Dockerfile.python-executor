@@ -1,0 +1,16 @@
+# Use an official Python runtime as a parent image
+FROM python:3.9-slim-buster
+
+# Set the working directory in the container
+WORKDIR /app
+
+# Copy the current directory contents into the container at /app
+# This is where user code will be mounted/copied for execution
+
+# Install any needed packages specified in requirements.txt
+# (We don't have one yet for the executor, but good practice)
+# COPY requirements.txt .
+# RUN pip install --no-cache-dir -r requirements.txt
+
+# Command to run the Python script (this will be overridden by docker run command)
+CMD ["python", "-c", "print('No code provided.')"]
