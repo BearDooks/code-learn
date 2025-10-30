@@ -256,13 +256,9 @@ async def delete_user_by_id(
 app = FastAPI()
 
 # Read allowed origins from environment variable, comma-separated
-ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173").split(',')
-
-origins = [origin.strip() for origin in ALLOWED_ORIGINS if origin.strip()]
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=["*"], # Temporarily allow all origins for debugging
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
