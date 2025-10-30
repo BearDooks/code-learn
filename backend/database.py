@@ -1,9 +1,12 @@
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
+import os
+from dotenv import load_dotenv
 
-# Database connection details
-SQLALCHEMY_DATABASE_URL = "postgresql://postgres:Tor69pens@localhost/codelearn_db"
+# Load environment variables from .env file (for local development)
+load_dotenv()
+SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://user:password@localhost/code_learn_db")
 
 engine = create_engine(SQLALCHEMY_DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
