@@ -10,7 +10,7 @@ COPY package.json package-lock.json ./
 RUN npm install
 
 COPY . .
-RUN npm run build
+RUN VITE_API_BASE_URL=$VITE_API_BASE_URL npm run build
 
 # Set environment variable for the build stage
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
