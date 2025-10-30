@@ -8,6 +8,9 @@ from sqlalchemy.orm import Session
 import models, schemas, auth
 from database import get_db, engine, SessionLocal
 from typing import List
+import httpx # Import httpx for making HTTP requests
+import os # Import os to read environment variables
+from dotenv import load_dotenv # Import load_dotenv
 
 app = FastAPI()
 
