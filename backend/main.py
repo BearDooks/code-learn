@@ -250,16 +250,12 @@ async def delete_user_by_id(
     db.commit()
     return {"message": "User deleted successfully!"}
 
-import httpx # Import httpx for making HTTP requests
-import os # Import os to read environment variables
-from dotenv import load_dotenv # Import load_dotenv
-
 app = FastAPI()
 
-origins = [
-    "http://localhost:5173",  # Frontend URL
-    "http://127.0.0.1:5173",  # Frontend URL
-]
+# Read allowed origins from environment variable, comma-separated
+ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173").split(',')
+
+origins = [origin.strip() for origin in ALLOWED_ORIGINS if origin.strip()]
 
 app.add_middleware(
     CORSMiddleware,
