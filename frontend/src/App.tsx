@@ -88,7 +88,7 @@ function App() {
 
     if (token && tokenType) {
       try {
-        const response = await fetch('http://localhost:8000/users/me/', {
+        const response = await fetch(import.meta.env.VITE_API_BASE_URL + '/users/me/', {
           method: 'GET',
           headers: {
             'Authorization': `${tokenType} ${token}`,
@@ -123,7 +123,7 @@ function App() {
 
     const fetchAllLessons = async () => {
       try {
-        const response = await fetch('http://localhost:8000/lessons/');
+        const response = await fetch(import.meta.env.VITE_API_BASE_URL + '/lessons/');
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }

@@ -30,6 +30,9 @@ services:
     build: ./frontend
     ports:
       - "3000:80" # Map host port 3000 to container's port 80 (Nginx default)
+    environment:
+      # Frontend needs to know the backend URL to make API calls
+      VITE_API_BASE_URL: http://backend:8000
     depends_on:
       - backend # Frontend depends on backend for API calls
 
