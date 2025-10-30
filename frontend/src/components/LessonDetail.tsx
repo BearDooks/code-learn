@@ -35,7 +35,7 @@ const LessonDetail: React.FC = () => {
 
       setLoading(true);
       try {
-        const response = await fetch(`http://localhost:8000/lessons/${id}`);
+        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/lessons/${id}`);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -49,7 +49,7 @@ const LessonDetail: React.FC = () => {
           const tokenType = localStorage.getItem('token_type');
 
           if (token && tokenType) {
-            fetch(`http://localhost:8000/users/me/lessons/completed`, {
+            fetch(`${import.meta.env.VITE_API_BASE_URL}/users/me/lessons/completed`, {
               headers: {
                 'Authorization': `${tokenType} ${token}`,
               },
@@ -115,7 +115,7 @@ const LessonDetail: React.FC = () => {
     setExerciseOutput('Running exercise code...');
 
     try {
-      const response = await fetch('http://localhost:8000/execute-code/', {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/execute-code/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -142,7 +142,7 @@ const LessonDetail: React.FC = () => {
       // Check if the code execution was successful (passed tests)
       if (result.status === "success" && lesson?.id) {
         // Call the complete lesson endpoint
-        const completeLessonResponse = await fetch(`http://localhost:8000/lessons/${lesson.id}/complete`, {
+        const completeLessonResponse = await fetch(`${import.meta.env.VITE_API_BASE_URL}/lessons/${lesson.id}/complete`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -187,7 +187,7 @@ const LessonDetail: React.FC = () => {
     setExerciseError(null);
 
     try {
-      const response = await fetch(`http://localhost:8000/lessons/${lesson.id}/complete`, {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/lessons/${lesson.id}/complete`, {
         method: 'DELETE',
         headers: {
           'Authorization': `${tokenType} ${token}`,
