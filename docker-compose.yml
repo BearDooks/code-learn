@@ -31,7 +31,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
-      - code_executor # Backend depends on code_executor
+      code_executor:
+        condition: service_started # Backend depends on code_executor
 
   frontend:
     build:
