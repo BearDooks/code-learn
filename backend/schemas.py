@@ -4,7 +4,7 @@ from typing import List, Optional
 
 class UserBase(BaseModel):
     email: EmailStr
-    name: str | None = None # Add name to UserBase
+    name: Optional[str] = None # Add name to UserBase
 
 class UserCreate(UserBase):
     password: str
@@ -23,28 +23,28 @@ class Token(BaseModel):
     token_type: str
 
 class TokenData(BaseModel):
-    email: EmailStr | None = None
+    email: Optional[EmailStr] = None
 
 class UserUpdate(BaseModel):
-    email: EmailStr | None = None
-    name: str | None = None
-    is_active: bool | None = None
-    is_admin: bool | None = None
+    email: Optional[EmailStr] = None
+    name: Optional[str] = None
+    is_active: Optional[bool] = None
+    is_admin: Optional[bool] = None
 
 class LessonCreate(BaseModel):
     title: str
     content: str
-    code_example: str | None = None
-    prefill_code: str | None = None
-    test_code: str | None = None
+    code_example: Optional[str] = None
+    prefill_code: Optional[str] = None
+    test_code: Optional[str] = None
 
 class Lesson(BaseModel):
     id: int
     title: str
     content: str
-    code_example: str | None = None
-    prefill_code: str | None = None
-    test_code: str | None = None
+    code_example: Optional[str] = None
+    prefill_code: Optional[str] = None
+    test_code: Optional[str] = None
     completions: List["UserLessonCompletion"] = [] # Forward reference
 
     class Config:
@@ -53,11 +53,11 @@ class Lesson(BaseModel):
 class CodeExecutionRequest(BaseModel):
     code: str
     language: str = "python" # Default to python
-    test_code: str | None = None
+    test_code: Optional[str] = None
 
 class CodeExecutionResult(BaseModel):
     output: str
-    error: str | None = None
+    error: Optional[str] = None
     status: str = "success"
 
 # New schemas for UserLessonCompletion
