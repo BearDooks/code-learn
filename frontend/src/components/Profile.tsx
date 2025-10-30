@@ -195,9 +195,9 @@ const Profile: React.FC = () => {
           {userProfile.lesson_completions && userProfile.lesson_completions.length > 0 ? (
             <ul className="list-group">
               {userProfile.lesson_completions.map((lessonCompletion) => {
-                const fullLesson = allLessons.find(lesson => lesson.id === lessonCompletion.lesson_id);
+                const fullLesson = allLessons.find(lesson => lesson.id === lessonCompletion.id);
                 return fullLesson ? (
-                  <li key={lessonCompletion.lesson_id} className="list-group-item">
+                  <li key={lessonCompletion.id} className="list-group-item">
                     {fullLesson.title}
                   </li>
                 ) : null;
