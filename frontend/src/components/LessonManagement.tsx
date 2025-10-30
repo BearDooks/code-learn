@@ -33,7 +33,7 @@ const LessonManagement: React.FC = () => {
     }
 
     try {
-      const response = await fetch('http://localhost:8000/lessons/', {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/lessons/`, {
         headers: {
           'Authorization': `${tokenType} ${token}`,
         },
@@ -83,7 +83,7 @@ const LessonManagement: React.FC = () => {
     }
 
     try {
-      const response = await fetch(`http://localhost:8000/lessons/${lessonId}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/lessons/${lessonId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `${tokenType} ${token}`,

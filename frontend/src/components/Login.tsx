@@ -45,7 +45,7 @@ const Login: React.FC = () => {
     form_data.append("password", password);
 
     try {
-      const response = await fetch('http://localhost:8000/token', {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/token`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
@@ -63,7 +63,7 @@ const Login: React.FC = () => {
       localStorage.setItem('token_type', data.token_type);
 
       // Fetch user details to get admin status
-      const userResponse = await fetch('http://localhost:8000/users/me/', {
+      const userResponse = await fetch(`${import.meta.env.VITE_API_BASE_URL}/users/me/`, {
         method: 'GET',
         headers: {
           'Authorization': `${data.token_type} ${data.access_token}`,

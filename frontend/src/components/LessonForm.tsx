@@ -36,7 +36,7 @@ const LessonForm: React.FC<LessonFormProps> = () => {
         return;
       }
 
-      fetch(`http://localhost:8000/lessons/${id}`, {
+      fetch(`${import.meta.env.VITE_API_BASE_URL}/lessons/${id}`, {
         headers: {
           'Authorization': `${tokenType} ${token}`,
         },
@@ -101,7 +101,7 @@ const LessonForm: React.FC<LessonFormProps> = () => {
     }
 
     const method = isEditing ? 'PUT' : 'POST';
-    const url = isEditing ? `http://localhost:8000/lessons/${id}` : 'http://localhost:8000/lessons/';
+    const url = isEditing ? `${import.meta.env.VITE_API_BASE_URL}/lessons/${id}` : `${import.meta.env.VITE_API_BASE_URL}/lessons/`;
 
     try {
       const response = await fetch(url, {

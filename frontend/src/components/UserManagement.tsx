@@ -31,7 +31,7 @@ const UserManagement: React.FC = () => {
     }
 
     try {
-      const response = await fetch('http://localhost:8000/users/', {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/users/`, {
         headers: {
           'Authorization': `${tokenType} ${token}`,
         },
@@ -77,7 +77,7 @@ const UserManagement: React.FC = () => {
     }
 
     try {
-      const response = await fetch(`http://localhost:8000/users/${editingUser.id}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/users/${editingUser.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -113,7 +113,7 @@ const UserManagement: React.FC = () => {
     }
 
     try {
-      const response = await fetch(`http://localhost:8000/users/${userId}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/users/${userId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `${tokenType} ${token}`,

@@ -21,7 +21,7 @@ const LessonsList: React.FC = () => {
 
       try {
         // Fetch all lessons
-        const lessonsResponse = await fetch('http://localhost:8000/lessons/');
+        const lessonsResponse = await fetch(`${import.meta.env.VITE_API_BASE_URL}/lessons/`);
         if (!lessonsResponse.ok) {
           throw new Error(`HTTP error! status: ${lessonsResponse.status}`);
         }
@@ -34,7 +34,7 @@ const LessonsList: React.FC = () => {
           const tokenType = localStorage.getItem('token_type');
 
           if (token && tokenType) {
-            const completedResponse = await fetch('http://localhost:8000/users/me/lessons/completed', {
+            const completedResponse = await fetch(`${import.meta.env.VITE_API_BASE_URL}/users/me/lessons/completed`, {
               headers: {
                 'Authorization': `${tokenType} ${token}`,
               },

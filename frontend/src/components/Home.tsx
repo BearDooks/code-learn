@@ -6,7 +6,7 @@ const Home: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch('http://localhost:8000/') // Assuming backend runs on port 8000
+    fetch(import.meta.env.VITE_API_BASE_URL + '/') // Assuming backend runs on port 8000
       .then(response => {
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);

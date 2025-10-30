@@ -40,7 +40,7 @@ const Profile: React.FC = () => {
     }
 
     try {
-      const response = await fetch('http://localhost:8000/users/me/lessons/completed', {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/users/me/lessons/completed`, {
         method: 'DELETE',
         headers: {
           'Authorization': `${tokenType} ${token}`,
@@ -78,7 +78,7 @@ const Profile: React.FC = () => {
     }
 
     try {
-      const response = await fetch('http://localhost:8000/users/me', {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/users/me`, {
         method: 'DELETE',
         headers: {
           'Authorization': `${tokenType} ${token}`,
@@ -122,7 +122,7 @@ const Profile: React.FC = () => {
 
         try {
           // Fetch user profile
-          const profileResponse = await fetch('http://localhost:8000/users/me/', {
+          const profileResponse = await fetch(`${import.meta.env.VITE_API_BASE_URL}/users/me/`, {
             headers: {
               'Authorization': `${tokenType} ${token}`,
             },
