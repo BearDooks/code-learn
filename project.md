@@ -5,7 +5,6 @@ Develop an open-source web application to teach coding skills through interactiv
 
 ## Core Features:
 *   **Interactive Lessons:** Display coding lessons with explanations, code examples, and exercises.
-*   **Code Editor:** An integrated, interactive code editor where users can write and run code directly in the browser.
 *   **Automated Feedback/Testing:** System to evaluate user-submitted code against test cases and provide immediate feedback.
 *   **User Authentication:** Allow users to create accounts, log in, and manage their profiles.
 *   **Progress Tracking:** Track user progress through lessons and projects.
@@ -44,7 +43,24 @@ Develop an open-source web application to teach coding skills through interactiv
 *   **User Authentication:** Fully implemented with signup, login, profile, and role-based access control (admin/non-admin).
 *   **Lesson Management:** CRUD operations for lessons (create, read list, read detail, update) are implemented. Lessons can include `code_example`, `prefill_code` (for exercises), and `test_code` fields.
 *   **Interactive Lesson Display:** Code examples are displayed using Monaco Editor in read-only mode. Lesson content supports Markdown rendering.
-*   **Code Execution (Frontend Integration):):** Frontend code editors (main editor and lesson exercise editor) send user code and `test_code` to a backend endpoint. The backend executes the code and returns output, errors, and a status (success/error/test_failed).
+*   **Code Execution (Frontend Integration):** Frontend code editors (main editor and lesson exercise editor) send user code and `test_code` to a backend endpoint. The backend executes the code and returns output, errors, and a status (success/error/test_failed).
 *   **Code Execution (Backend - Direct Server Execution):** The backend currently executes Python code directly on the server. **WARNING: This is a severe security risk and is for development only. MUST be replaced with a secure, sandboxed environment (e.g., Docker) before deployment.**
-*   **UI/UX Refinement:** Initial phase completed, including: sticky footer, improved layout, client-side form validation and feedback for signup, login, and lesson forms, loading indicators, error handling, card styling, and improved visual flow on lesson detail page.
+*   **Removed Code Playground:** The standalone `/editor` code playground section has been removed from the application.
+*   **User Progress Management:**
+    *   Users can mark individual lessons as incomplete.
+    *   Users can reset all their lesson progress from their profile.
+    *   Users can delete their account from their profile, which also removes all associated lesson completions.
+    *   Visual feedback (Bootstrap alert) is provided upon successful lesson completion, with improved message and placement.
+*   **Admin User Management:**
+    *   Admin users can view a list of all users in the system.
+    *   Admin users can edit user details (email, name, active status, admin status) via a modal.
+    *   Admin users can delete user accounts.
+*   **Create Lesson Page Enhancements:** The wording and layout of descriptions for code examples, prefill code, and test code input fields have been improved for better readability and clarity.
+*   **UI/UX Refinement:**
+    *   **Active Navigation Links:** Navigation links now visually indicate the active page.
+    *   **Branding/Logo:** A simple text-based logo with styling has been added to the navbar.
+    *   **Global Alert System:** Implemented for consistent user feedback across `Login`, `Signup`, `Profile`, and `LessonForm` components.
+    *   **Global Loading Indicator:** Implemented for consistent loading feedback across `Login`, `Signup`, `Profile`, and `LessonDetail` components.
+    *   **Lesson Detail Page Loading Fix:** Resolved an issue where the loading spinner would persist indefinitely on the Lesson Detail page.
+*   **Initial Lessons:** 10 new introductory lessons have been created and added to the database, covering fundamental programming concepts (printing, variables, arithmetic, strings, input, conditionals, loops, functions, return values).
 *   **Next Immediate Focus:** Implement the actual sandboxed code execution environment on the backend using Docker to address security concerns.

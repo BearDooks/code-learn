@@ -9,7 +9,7 @@ const Login: React.FC = () => {
   const [emailError, setEmailError] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const navigate = useNavigate();
-  const { setIsLoggedIn, setIsAdmin } = useAuth(); // Use useAuth hook
+  const { setIsLoggedIn, setIsAdmin, setGlobalAlert, setGlobalLoading } = useAuth(); // Use useAuth hook
 
   const validateEmail = (email: string) => {
     if (!email) return "Email is required.";
@@ -24,7 +24,8 @@ const Login: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
+    setGlobalLoading(true); // Show global loading indicator
+    // Clear local errors, global errors will be handled by setGlobalAlert
     setEmailError(null);
     setPasswordError(null);
 
@@ -35,6 +36,8 @@ const Login: React.FC = () => {
     if (passwordValidation) setPasswordError(passwordValidation);
 
     if (emailValidation || passwordValidation) {
+      setGlobalAlert("Please correct the form errors.", "danger");
+      setGlobalLoading(false); // Hide loading on form errors
       return;
     }
 
@@ -72,24 +75,26 @@ const Login: React.FC = () => {
         const userData = await userResponse.json();
         setIsLoggedIn(true);
         setIsAdmin(userData.is_admin);
+        setGlobalAlert(`Welcome back, ${userData.name || userData.email}!`, "success");
       } else {
         // Fallback if user details can't be fetched
         setIsLoggedIn(true);
         setIsAdmin(false);
+        setGlobalAlert("Logged in, but could not fetch user details.", "warning");
       }
 
-      alert('Login successful!');
       navigate('/profile'); // Redirect to profile page or dashboard
 
     } catch (err: any) {
-      setError(err.message);
+      setGlobalAlert(`Login failed: ${err.message}`, "danger");
+    } finally {
+      setGlobalLoading(false); // Hide global loading indicator
     }
   };
 
   return (
     <div>
       <h1>Login</h1>
-      {error && <div className="alert alert-danger" role="alert">{error}</div>}
       <form onSubmit={handleSubmit} noValidate>
         <div className="mb-3">
           <label htmlFor="emailInput" className="form-label">Email address</label>

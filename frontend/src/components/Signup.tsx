@@ -1,15 +1,16 @@
-import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../App'; // Import useAuth hook
 
 const Signup: React.FC = () => {
   const [email, setEmail] = useState<string>('');
   const [password, setPassword] = useState<string>('');
+  const [name, setName] = useState<string>(''); // New state for name
   const [confirmPassword, setConfirmPassword] = useState<string>('');
-  const [error, setError] = useState<string | null>(null);
   const [emailError, setEmailError] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [confirmPasswordError, setConfirmPasswordError] = useState<string | null>(null);
   const navigate = useNavigate();
+  const { setGlobalAlert, setGlobalLoading } = useAuth(); // Use useAuth hook
 
   const validateEmail = (email: string) => {
     if (!email) return "Email is required.";
@@ -32,7 +33,8 @@ const Signup: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
+    setGlobalLoading(true); // Show global loading indicator
+    // Clear local errors, global errors will be handled by setGlobalAlert
     setEmailError(null);
     setPasswordError(null);
     setConfirmPasswordError(null);
@@ -46,6 +48,8 @@ const Signup: React.FC = () => {
     if (confirmPasswordValidation) setConfirmPasswordError(confirmPasswordValidation);
 
     if (emailValidation || passwordValidation || confirmPasswordValidation) {
+      setGlobalAlert("Please correct the form errors.", "danger");
+      setGlobalLoading(false); // Hide loading on form errors
       return;
     }
 
@@ -55,7 +59,7 @@ const Signup: React.FC = () => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, name }), // Include name in the body
       });
 
       if (!response.ok) {
@@ -63,18 +67,21 @@ const Signup: React.FC = () => {
         throw new Error(errorData.detail || 'Failed to register');
       }
 
-      alert('Registration successful! Please log in.');
-      navigate('/login');
+      setGlobalAlert('Registration successful! Please log in.', "success"); // Use global alert
+      setTimeout(() => {
+        navigate('/login'); // Redirect after a short delay
+      }, 2000); // 2 seconds delay
 
     } catch (err: any) {
-      setError(err.message);
+      setGlobalAlert(`Registration failed: ${err.message}`, "danger"); // Use global alert
+    } finally {
+      setGlobalLoading(false); // Hide global loading indicator
     }
   };
 
   return (
     <div>
       <h1>Sign Up</h1>
-      {error && <div className="alert alert-danger" role="alert">{error}</div>}
       <form onSubmit={handleSubmit} noValidate>
         <div className="mb-3">
           <label htmlFor="emailInput" className="form-label">Email address</label>
@@ -88,6 +95,17 @@ const Signup: React.FC = () => {
             required
           />
           {emailError && <div className="invalid-feedback">{emailError}</div>}
+        </div>
+        <div className="mb-3">
+          <label htmlFor="nameInput" className="form-label">Name</label> {/* New input field */}
+          <input
+            type="text"
+            className="form-control"
+            id="nameInput"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+          />
         </div>
         <div className="mb-3">
           <label htmlFor="passwordInput" className="form-label">Password</label>

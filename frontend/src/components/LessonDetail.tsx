@@ -19,14 +19,18 @@ const LessonDetail: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
-  const { isAdmin, isLoggedIn } = useAuth(); // Use useAuth hook
+  const { isAdmin, isLoggedIn, setGlobalLoading } = useAuth(); // Use useAuth hook
 
   const [exerciseCode, setExerciseCode] = useState<string>(''); // Initialize with empty string
   const [exerciseOutput, setExerciseOutput] = useState<string>('Output will appear here.');
   const [exerciseError, setExerciseError] = useState<string | null>(null);
+  const [showCompletionAlert, setShowCompletionAlert] = useState<boolean>(false);
+  const [isLessonCompleted, setIsLessonCompleted] = useState<boolean>(false);
 
   useEffect(() => {
     if (id) {
+      setLoading(true);
+      setGlobalLoading(true); // Show global loading indicator
       fetch(`http://localhost:8000/lessons/${id}`)
         .then(response => {
           if (!response.ok) {
@@ -38,14 +42,36 @@ const LessonDetail: React.FC = () => {
           setLesson(data);
           setExerciseCode(data.prefill_code || '# Write your solution here'); // Set prefill code
           setLoading(false);
+
+          if (isLoggedIn && data.id) {
+            const token = localStorage.getItem('access_token');
+            const tokenType = localStorage.getItem('token_type');
+
+            if (token && tokenType) {
+              fetch(`http://localhost:8000/users/me/lessons/completed`, {
+                headers: {
+                  'Authorization': `${tokenType} ${token}`,
+                },
+              })
+              .then(response => response.json())
+              .then((completedLessons: Lesson[]) => {
+                const completed = completedLessons.some(cl => cl.id === data.id);
+                setIsLessonCompleted(completed);
+              })
+              .catch(err => console.error("Error fetching completed lessons:", err));
+            }
+          }
         })
         .catch(error => {
           console.error("Error fetching lesson:", error);
           setError(error.message);
           setLoading(false);
+        })
+        .finally(() => {
+          setGlobalLoading(false); // Hide global loading indicator
         });
     }
-  }, [id]);
+  }, [id, isLoggedIn, setGlobalLoading]); // Add setGlobalLoading to dependencies
 
   const handleEditClick = () => {
     navigate(`/lessons/${id}/edit`);
@@ -59,11 +85,13 @@ const LessonDetail: React.FC = () => {
       return;
     }
 
+    setGlobalLoading(true); // Show global loading indicator
     const token = localStorage.getItem('access_token');
     const tokenType = localStorage.getItem('token_type');
 
     if (!token || !tokenType) {
       setExerciseError('Authentication token not found. Please log in.');
+      setGlobalLoading(false); // Hide loading on auth error
       return;
     }
 
@@ -111,15 +139,59 @@ const LessonDetail: React.FC = () => {
           console.error('Failed to mark lesson as complete:', errorData.detail || 'Unknown error');
           // Optionally, show an error to the user that completion failed
         } else {
-          console.log('Lesson marked as complete!');
-          // Optionally, show a success message to the user
-          // You might want to update the UI to reflect completion, e.g., a "Completed" badge
+          setShowCompletionAlert(true);
+          setTimeout(() => setShowCompletionAlert(false), 5000); // Hide alert after 5 seconds
         }
       }
 
     } catch (err: any) {
       setExerciseError(err.message);
       setExerciseOutput('Error during execution.');
+    } finally {
+      setGlobalLoading(false); // Hide global loading indicator
+    }
+  };
+
+  const handleResetLessonProgress = async () => {
+    if (!isLoggedIn || !lesson?.id) {
+      setExerciseError('You must be logged in to reset progress.');
+      return;
+    }
+
+    setGlobalLoading(true); // Show global loading indicator
+    const token = localStorage.getItem('access_token');
+    const tokenType = localStorage.getItem('token_type');
+
+    if (!token || !tokenType) {
+      setExerciseError('Authentication token not found. Please log in.');
+      setGlobalLoading(false); // Hide loading on auth error
+      return;
+    }
+
+    setExerciseError(null);
+
+    try {
+      const response = await fetch(`http://localhost:8000/lessons/${lesson.id}/complete`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `${tokenType} ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Failed to reset lesson progress');
+      }
+
+      // Optionally, show a success message or update UI
+      alert('Lesson progress reset!');
+      setShowCompletionAlert(false); // Hide completion alert if it was showing
+      setIsLessonCompleted(false); // Hide the reset button
+
+    } catch (err: any) {
+      setExerciseError(err.message);
+    } finally {
+      setGlobalLoading(false); // Hide global loading indicator
     }
   };
 
@@ -143,6 +215,11 @@ const LessonDetail: React.FC = () => {
           Edit Lesson
         </button>
       )}
+      {isLessonCompleted && (
+        <button className="btn btn-warning btn-sm mb-3 ms-2" onClick={handleResetLessonProgress}>
+          Reset Lesson Progress
+        </button>
+      )}
       <ReactMarkdown>{lesson.content}</ReactMarkdown>
 
       {lesson.code_example && (
@@ -164,6 +241,13 @@ const LessonDetail: React.FC = () => {
       )}
 
       <hr className="my-5" /> {/* Visual separator */}
+
+      {showCompletionAlert && (
+        <div className="alert alert-success alert-dismissible fade show" role="alert">
+          That's correct! Marking lesson as complete!
+          <button type="button" className="btn-close" data-bs-dismiss="alert" aria-label="Close" onClick={() => setShowCompletionAlert(false)}></button>
+        </div>
+      )}
 
       <div className="mt-4 p-3 border rounded bg-light shadow-sm">
         <h3>Your Code Exercise</h3>

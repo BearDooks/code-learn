@@ -4,6 +4,7 @@ from typing import List, Optional
 
 class UserBase(BaseModel):
     email: EmailStr
+    name: str | None = None # Add name to UserBase
 
 class UserCreate(UserBase):
     password: str
@@ -23,6 +24,12 @@ class Token(BaseModel):
 
 class TokenData(BaseModel):
     email: EmailStr | None = None
+
+class UserUpdate(BaseModel):
+    email: EmailStr | None = None
+    name: str | None = None
+    is_active: bool | None = None
+    is_admin: bool | None = None
 
 class LessonCreate(BaseModel):
     title: str

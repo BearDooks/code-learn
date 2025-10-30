@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useAuth } from '../App'; // Import useAuth hook
 
 interface LessonFormProps {
   lessonId?: string; // Optional prop for editing existing lessons
@@ -14,21 +15,22 @@ const LessonForm: React.FC<LessonFormProps> = () => {
   const [codeExample, setCodeExample] = useState<string>('');
   const [prefillCode, setPrefillCode] = useState<string>(''); // New state for prefill code
   const [testCode, setTestCode] = useState<string>(''); // New state for test code
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
+  // const [error, setError] = useState<string | null>(null); // Replaced by global alert
+  // const [success, setSuccess] = useState<string | null>(null); // Replaced by global alert
   const [loading, setLoading] = useState<boolean>(false); // Add loading state
   const [titleError, setTitleError] = useState<string | null>(null);
   const [contentError, setContentError] = useState<string | null>(null);
   const navigate = useNavigate();
+  const { setGlobalAlert } = useAuth(); // Use useAuth hook
 
   useEffect(() => {
     if (isEditing && id) {
       setLoading(true); // Set loading to true when fetching
-      const token = localStorage.getItem('access_token');
+      const token = localStorage.getItem('access_access_token');
       const tokenType = localStorage.getItem('token_type');
 
       if (!token || !tokenType) {
-        setError('You must be logged in to edit a lesson.');
+        setGlobalAlert('You must be logged in to edit a lesson.', "danger");
         navigate('/login');
         setLoading(false);
         return;
@@ -55,11 +57,11 @@ const LessonForm: React.FC<LessonFormProps> = () => {
         })
         .catch(err => {
           console.error("Error fetching lesson for editing:", err);
-          setError(err.message);
+          setGlobalAlert(`Error fetching lesson: ${err.message}`, "danger");
           setLoading(false);
         });
     }
-  }, [id, isEditing, navigate]);
+  }, [id, isEditing, navigate, setGlobalAlert]); // Add setGlobalAlert to dependencies
 
   const validateTitle = (title: string) => {
     if (!title) return "Lesson title is required.";
@@ -73,8 +75,8 @@ const LessonForm: React.FC<LessonFormProps> = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
-    setSuccess(null);
+    // setError(null); // Replaced by global alert
+    // setSuccess(null); // Replaced by global alert
     setTitleError(null);
     setContentError(null);
 
@@ -85,14 +87,15 @@ const LessonForm: React.FC<LessonFormProps> = () => {
     if (contentValidation) setContentError(contentValidation);
 
     if (titleValidation || contentValidation) {
+      setGlobalAlert("Please correct the form errors.", "danger");
       return;
     }
 
-    const token = localStorage.getItem('access_token');
+    const token = localStorage.getItem('access_access_token');
     const tokenType = localStorage.getItem('token_type');
 
     if (!token || !tokenType) {
-      setError('You must be logged in to create/edit a lesson.');
+      setGlobalAlert('You must be logged in to create/edit a lesson.', "danger");
       navigate('/login');
       return;
     }
@@ -105,7 +108,6 @@ const LessonForm: React.FC<LessonFormProps> = () => {
         method: method,
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `${tokenType} ${token}`,
         },
         body: JSON.stringify({ title, content, code_example: codeExample, prefill_code: prefillCode, test_code: testCode }),
       });
@@ -116,7 +118,7 @@ const LessonForm: React.FC<LessonFormProps> = () => {
       }
 
       const lessonData = await response.json();
-      setSuccess(`Lesson "${lessonData.title}" ${isEditing ? 'updated' : 'created'} successfully!`);
+      setGlobalAlert(`Lesson "${lessonData.title}" ${isEditing ? 'updated' : 'created'} successfully!`, "success");
       if (!isEditing) {
         setTitle('');
         setContent('');
@@ -127,7 +129,7 @@ const LessonForm: React.FC<LessonFormProps> = () => {
       navigate(`/lessons/${lessonData.id}`);
 
     } catch (err: any) {
-      setError(err.message);
+      setGlobalAlert(`Failed to ${isEditing ? 'update' : 'create'} lesson: ${err.message}`, "danger");
     }
   };
 
@@ -144,8 +146,9 @@ const LessonForm: React.FC<LessonFormProps> = () => {
   return (
     <div>
       <h1>{isEditing ? 'Edit Lesson' : 'Create New Lesson'}</h1>
-      {error && <div className="alert alert-danger" role="alert">{error}</div>}
-      {success && <div className="alert alert-success" role="alert">{success}</div>}
+      {/* Replaced by global alert */}
+      {/* {error && <div className="alert alert-danger" role="alert">{error}</div>} */}
+      {/* {success && <div className="alert alert-success" role="alert">{success}</div>} */}
       <form onSubmit={handleSubmit} noValidate>
         <div className="mb-3">
           <label htmlFor="lessonTitle" className="form-label">Lesson Title</label>
@@ -173,7 +176,9 @@ const LessonForm: React.FC<LessonFormProps> = () => {
         </div>
         <div className="mb-3">
           <label htmlFor="codeExample" className="form-label">Code Example (Optional)</label>
-          <div className="form-text text-muted mb-2">Provide a code snippet to illustrate a concept. This code is read-only for the user.</div>
+          <div className="form-text text-muted mb-2">
+            Provide a code snippet to illustrate a concept. This code is displayed to the user and is read-only.
+          </div>
           <textarea
             className="form-control"
             id="codeExample"
@@ -185,8 +190,11 @@ const LessonForm: React.FC<LessonFormProps> = () => {
         </div>
         <div className="mb-3">
           <label htmlFor="prefillCode" className="form-label">Exercise Prefill Code (Optional)</label>
-          <div className="form-text text-muted mb-2">This code will pre-populate the user's editor for the exercise. Use it to provide a starting point or instructions.
-            Example: `# How would you print "This course rocks"?`
+          <div className="form-text text-muted mb-2">
+            This code will pre-populate the user's editor for the exercise. Use it to provide a starting point or instructions.
+            <br />
+            Example:
+            <pre className="bg-light p-2 rounded"><code># How would you print "This course rocks"?</code></pre>
           </div>
           <textarea
             className="form-control"
@@ -199,12 +207,18 @@ const LessonForm: React.FC<LessonFormProps> = () => {
         </div>
         <div className="mb-3">
           <label htmlFor="testCode" className="form-label">Exercise Test Code (Optional)</label>
-          <div className="form-text text-muted mb-2">Python code to test the user's solution. It should raise an AssertionError if the solution is incorrect.
-            The user's printed output is available in the `user_printed_output` variable.
-            To test return values, the user's code should assign the result to `_user_return_value_capture`.
-            The test code can then access this as `user_return_value`.
-            Example for printed output: `expected_output = "This course rocks\n"\nassert user_printed_output == expected_output, "Incorrect output!"`
-            Example for return value: `assert user_return_value == 42, "Incorrect return value!"`
+          <div className="form-text text-muted mb-2">
+            Python code to test the user's solution. It should raise an `AssertionError` if the solution is incorrect.
+            <ul>
+              <li>User's printed output is available in the <code>user_printed_output</code> variable.</li>
+              <li>To test return values, the user's code should assign the result to <code>_user_return_value_capture</code>. The test code can then access this as <code>user_return_value</code>.</li>
+            </ul>
+            Examples:
+            <pre className="bg-light p-2 rounded"><code># Example for printed output:
+expected_output = "This course rocks\n"
+assert user_printed_output == expected_output, "Incorrect output!"</code></pre>
+            <pre className="bg-light p-2 rounded"><code># Example for return value:
+assert user_return_value == 42, "Incorrect return value!"</code></pre>
           </div>
           <textarea
             className="form-control"

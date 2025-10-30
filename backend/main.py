@@ -53,7 +53,7 @@ async def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
     if len(user.password.encode('utf-8')) > 72:
         raise HTTPException(status_code=400, detail="Password cannot be longer than 72 characters")
     hashed_password = auth.get_password_hash(user.password)
-    db_user = models.User(email=user.email, hashed_password=hashed_password, is_admin=False) # Default to non-admin
+    db_user = models.User(email=user.email, hashed_password=hashed_password, is_admin=False, name=user.name) # Add name=user.name
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
@@ -128,6 +128,30 @@ async def complete_lesson(
     db.refresh(db_completion)
     return db_completion
 
+@app.delete("/lessons/{lesson_id}/complete")
+async def uncomplete_lesson(
+    lesson_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    # Check if lesson exists
+    lesson = db.query(models.Lesson).filter(models.Lesson.id == lesson_id).first()
+    if not lesson:
+        raise HTTPException(status_code=404, detail="Lesson not found")
+
+    # Check if already completed
+    completion = db.query(models.UserLessonCompletion).filter(
+        models.UserLessonCompletion.user_id == current_user.id,
+        models.UserLessonCompletion.lesson_id == lesson_id
+    ).first()
+
+    if not completion:
+        raise HTTPException(status_code=400, detail="Lesson not marked as completed by this user.")
+
+    db.delete(completion)
+    db.commit()
+    return {"message": "Lesson marked as incomplete!"}
+
 @app.get("/users/me/lessons/completed", response_model=List[schemas.Lesson])
 async def get_completed_lessons_for_current_user(
     db: Session = Depends(get_db),
@@ -138,8 +162,94 @@ async def get_completed_lessons_for_current_user(
     ).all()
     return completed_lessons
 
-import subprocess
-import sys
+@app.delete("/users/me/lessons/completed")
+async def reset_all_lesson_progress(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    db.query(models.UserLessonCompletion).filter(
+        models.UserLessonCompletion.user_id == current_user.id
+    ).delete()
+    db.commit()
+    return {"message": "All lesson progress reset!"}
+
+@app.delete("/users/me")
+async def delete_user_account(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    # Delete associated lesson completions first
+    db.query(models.UserLessonCompletion).filter(
+        models.UserLessonCompletion.user_id == current_user.id
+    ).delete()
+    
+    # Then delete the user
+    db.delete(current_user)
+    db.commit()
+    return {"message": "User account deleted successfully!"}
+
+    db_user = session.query(models.User).filter(models.User.email == "deleter@example.com").first()
+    assert db_user is None
+
+@app.get("/users/", response_model=List[schemas.User])
+async def get_all_users(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_admin_user) # Admin protected
+):
+    users = db.query(models.User).all()
+    return users
+
+@app.get("/users/{user_id}", response_model=schemas.User)
+async def get_user_by_id(
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_admin_user) # Admin protected
+):
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
+
+@app.put("/users/{user_id}", response_model=schemas.User)
+async def update_user(
+    user_id: int,
+    user_update: schemas.UserUpdate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_admin_user) # Admin protected
+):
+    db_user = db.query(models.User).filter(models.User.id == user_id).first()
+    if db_user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    update_data = user_update.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(db_user, key, value)
+
+    db.add(db_user)
+    db.commit()
+    db.refresh(db_user)
+    return db_user
+
+@app.delete("/users/{user_id}")
+async def delete_user_by_id(
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_admin_user) # Admin protected
+):
+    db_user = db.query(models.User).filter(models.User.id == user_id).first()
+    if db_user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Delete associated lesson completions first
+    db.query(models.UserLessonCompletion).filter(
+        models.UserLessonCompletion.user_id == user_id
+    ).delete()
+    
+    # Then delete the user
+    db.delete(db_user)
+    db.commit()
+    return {"message": "User deleted successfully!"}
+
 from io import StringIO
 from contextlib import redirect_stdout, redirect_stderr
 # ... (rest of your imports and app setup)
@@ -158,6 +268,8 @@ async def execute_code(request: schemas.CodeExecutionRequest, current_user: mode
     test_output = StringIO()
     test_error = StringIO()
     overall_status = "success"
+    final_output = "" # Initialize
+    final_error = ""  # Initialize
 
     # Create a dictionary to hold the execution scope (globals and locals)
     execution_scope = {}
@@ -174,10 +286,8 @@ async def execute_code(request: schemas.CodeExecutionRequest, current_user: mode
         else:
             execution_scope['user_return_value'] = None # Explicitly set to None if not assigned
     except Exception as e:
-        user_error.write(f"An error occurred during user code execution: {e}\n")
-        overall_status = "error"
-
-    # If test code is provided and user code executed without error, execute it
+        user_error.write(f"An error occurred during user code execution: {type(e).__name__}: {e}\n")
+        overall_status = "error"    # If test code is provided and user code executed without error, execute it
     if request.test_code and overall_status == "success":
         try:
             with redirect_stdout(test_output), redirect_stderr(test_error):
@@ -185,12 +295,16 @@ async def execute_code(request: schemas.CodeExecutionRequest, current_user: mode
                 # Execute test code in the same scope as user code
                 exec(request.test_code, execution_scope, execution_scope)
         except Exception as e:
-            test_error.write(f"An error occurred during test code execution: {e}\n")
+            test_error.write(f"An error occurred during test code execution: {type(e).__name__}: {e}\n")
             overall_status = "test_failed"
     elif request.test_code and overall_status != "success":
         test_error.write("Test code not executed due to errors in user code.\n")
 
-    final_output = user_output.getvalue() + test_output.getvalue()
+    # Add a success message if everything passed
+    if overall_status == "success" and not final_error:
+        pass # No longer write success message to test_output
+
+    final_output = user_output.getvalue()
     final_error = user_error.getvalue() + test_error.getvalue()
 
     if final_error and overall_status == "success": # If there was an error but not from test_code
@@ -199,10 +313,5 @@ async def execute_code(request: schemas.CodeExecutionRequest, current_user: mode
         pass # Status already set
     elif final_error:
         overall_status = "error"
-
-    # Add a success message if everything passed
-    if overall_status == "success" and not final_error:
-        test_output.write("\n--- Test Passed! ---\n")
-        final_output += "\n--- Test Passed! ---\n" # Update final_output with the success message
 
     return schemas.CodeExecutionResult(output=final_output, error=final_error or None, status=overall_status)

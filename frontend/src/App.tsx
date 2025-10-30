@@ -1,20 +1,25 @@
 import React, { useState, useEffect, createContext, useContext } from 'react';
-import { BrowserRouter as Router, Routes, Route, Link, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Link, NavLink, Navigate } from 'react-router-dom';
 import './App.css';
 import LessonsList from './components/LessonsList';
 import LessonDetail from './components/LessonDetail';
-import CodeEditor from './components/CodeEditor';
 import Login from './components/Login';
 import Signup from './components/Signup';
 import Profile from './components/Profile';
 import Home from './components/Home';
 import LessonForm from './components/LessonForm';
+import UserManagement from './components/UserManagement';
 
 interface AuthContextType {
   isLoggedIn: boolean;
   isAdmin: boolean;
   setIsLoggedIn: (loggedIn: boolean) => void;
   setIsAdmin: (admin: boolean) => void;
+  globalMessage: string | null;
+  globalMessageType: 'success' | 'danger' | 'info' | 'warning';
+  setGlobalAlert: (message: string, type: 'success' | 'danger' | 'info' | 'warning') => void;
+  isLoading: boolean;
+  setGlobalLoading: (loading: boolean) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -49,6 +54,19 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, adminOnly = f
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
+  const [globalMessage, setGlobalMessage] = useState<string | null>(null);
+  const [globalMessageType, setGlobalMessageType] = useState<'success' | 'danger' | 'info' | 'warning'>('info');
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+
+  const setGlobalAlert = (message: string, type: 'success' | 'danger' | 'info' | 'warning') => {
+    setGlobalMessage(message);
+    setGlobalMessageType(type);
+    setTimeout(() => setGlobalMessage(null), 5000); // Hide after 5 seconds
+  };
+
+  const setGlobalLoading = (loading: boolean) => {
+    setIsLoading(loading);
+  };
 
   const fetchUserStatus = async () => {
     const token = localStorage.getItem('access_token');
@@ -100,56 +118,63 @@ function App() {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ isLoggedIn, isAdmin, setIsLoggedIn, setIsAdmin }}>
+    <AuthContext.Provider value={{ isLoggedIn, isAdmin, setIsLoggedIn, setIsAdmin, globalMessage, globalMessageType, setGlobalAlert, isLoading, setGlobalLoading }}>
       <Router>
         <div className="d-flex flex-column min-vh-100"> {/* Added flexbox for sticky footer */}
           <nav className="navbar navbar-expand-lg navbar-light bg-light">
             <div className="container-fluid">
-              <Link className="navbar-brand" to="/">CodeLearn</Link>
+              <Link className="navbar-brand fw-bold text-primary" to="/">CodeLearn</Link>
               <button className="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                 <span className="navbar-toggler-icon"></span>
               </button>
               <div className="collapse navbar-collapse" id="navbarNav">
                 <ul className="navbar-nav me-auto mb-2 mb-lg-0">
                   <li className="nav-item">
-                    <Link className="nav-link" to="/">Home</Link>
+                    <NavLink className="nav-link" to="/">Home</NavLink>
                   </li>
                   {isLoggedIn && (
                     <li className="nav-item">
-                      <Link className="nav-link" to="/lessons">Lessons</Link>
-                    </li>
-                  )}
-                  {isLoggedIn && (
-                    <li className="nav-item">
-                      <Link className="nav-link" to="/editor">Code Editor</Link>
+                      <NavLink className="nav-link" to="/lessons">Lessons</NavLink>
                     </li>
                   )}
                   {isLoggedIn && isAdmin && (
                     <li className="nav-item">
-                      <Link className="nav-link" to="/lessons/new">Create Lesson</Link>
+                      <NavLink className="nav-link" to="/lessons/new">Create Lesson</NavLink>
+                    </li>
+                  )}
+                  {isLoggedIn && isAdmin && (
+                    <li className="nav-item">
+                      <NavLink className="nav-link" to="/admin/users">User Management</NavLink>
                     </li>
                   )}
                 </ul>
                 <ul className="navbar-nav">
                   {!isLoggedIn && (
                     <li className="nav-item">
-                      <Link className="nav-link" to="/login">Login</Link>
+                      <NavLink className="nav-link" to="/login">Login</NavLink>
                     </li>
                   )}
                   {!isLoggedIn && (
                     <li className="nav-item">
-                      <Link className="nav-link" to="/signup">Sign Up</Link>
+                      <NavLink className="nav-link" to="/signup">Sign Up</NavLink>
                     </li>
                   )}
                   {isLoggedIn && (
                     <li className="nav-item">
-                      <Link className="nav-link" to="/profile">Profile</Link>
+                      <NavLink className="nav-link" to="/profile">Profile</NavLink>
                     </li>
                   )}
                 </ul>
               </div>
             </div>
           </nav>
+
+          {globalMessage && (
+            <div className={`alert alert-${globalMessageType} alert-dismissible fade show`} role="alert">
+              {globalMessage}
+              <button type="button" className="btn-close" data-bs-dismiss="alert" aria-label="Close" onClick={() => setGlobalMessage(null)}></button>
+            </div>
+          )}
 
           <div className="flex-grow-1 container mt-4">
             <Routes>
@@ -162,10 +187,18 @@ function App() {
               <Route path="/lessons/:id" element={<ProtectedRoute><LessonDetail /></ProtectedRoute>} />
               <Route path="/lessons/new" element={<ProtectedRoute adminOnly><LessonForm /></ProtectedRoute>} />
               <Route path="/lessons/:id/edit" element={<ProtectedRoute adminOnly><LessonForm /></ProtectedRoute>} />
-              <Route path="/editor" element={<ProtectedRoute><CodeEditor /></ProtectedRoute>} />
+              <Route path="/admin/users" element={<ProtectedRoute adminOnly><UserManagement /></ProtectedRoute>} />
               <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
             </Routes>
           </div>
+
+          {isLoading && (
+            <div className="d-flex justify-content-center align-items-center" style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1050 }}>
+              <div className="spinner-border text-light" role="status">
+                <span className="visually-hidden">Loading...</span>
+              </div>
+            </div>
+          )}
 
           <footer className="bg-light text-center text-lg-start mt-auto py-3">
             <div className="text-center p-3">
