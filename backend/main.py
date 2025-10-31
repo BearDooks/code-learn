@@ -17,6 +17,8 @@ app = FastAPI()
 origins = [
     "http://localhost:5173",  # Frontend URL
     "http://127.0.0.1:5173",  # Frontend URL
+    "http://192.168.86.20:3000",
+    "http://127.0.0.1:3000",
 ]
 
 app.add_middleware(
@@ -31,6 +33,7 @@ app.add_middleware(
 @app.on_event("startup")
 def on_startup():
     models.Base.metadata.create_all(bind=engine)
+    load_dotenv() # Load environment variables from .env file
 
 @app.get("/")
 async def read_root():
@@ -253,22 +256,6 @@ async def delete_user_by_id(
     db.commit()
     return {"message": "User deleted successfully!"}
 
-app = FastAPI()
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://192.168.86.20:3000"], # Explicitly allow the reported origin
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# Create database tables on startup
-@app.on_event("startup")
-def on_startup():
-    models.Base.metadata.create_all(bind=engine)
-    load_dotenv() # Load environment variables from .env file
-
 CODE_EXECUTOR_URL = os.getenv("CODE_EXECUTOR_URL", "http://code_executor:5000")
 
 @app.get("/")
@@ -429,9 +416,6 @@ async def delete_user_account(
     db.delete(current_user)
     db.commit()
     return {"message": "User account deleted successfully!"}
-
-    db_user = session.query(models.User).filter(models.User.email == "deleter@example.com").first()
-    assert db_user is None
 
 @app.get("/users/", response_model=List[schemas.User])
 async def get_all_users(
