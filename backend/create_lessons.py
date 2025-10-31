@@ -86,8 +86,13 @@ def create_lessons(db: Session):
     ]
 
     for lesson_data in lessons_data:
-        lesson = models.Lesson(**lesson_data)
-        db.add(lesson)
+        existing_lesson = db.query(models.Lesson).filter(models.Lesson.title == lesson_data["title"]).first()
+        if not existing_lesson:
+            lesson = models.Lesson(**lesson_data)
+            db.add(lesson)
+            print(f"Added lesson: {lesson_data["title"]}")
+        else:
+            print(f"Lesson already exists, skipping: {lesson_data["title"]}")
     db.commit()
 
 if __name__ == "__main__":

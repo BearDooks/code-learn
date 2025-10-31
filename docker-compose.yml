@@ -20,7 +20,7 @@ services:
 
   backend:
     build: ./backend
-    command: uvicorn main:app --host 0.0.0.0 --port 8000
+    command: sh -c "./docker-entrypoint.sh uvicorn main:app --host 0.0.0.0 --port 8000"
     volumes:
       - ./backend:/app
     ports:
@@ -28,7 +28,8 @@ services:
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-user}:${POSTGRES_PASSWORD:-password}@db:5432/${POSTGRES_DB:-code_learn_db}
       CODE_EXECUTOR_URL: http://code_executor:5000 # Assuming code executor runs on port 5000
-      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS} # Pass ALLOWED_ORIGINS from .env
+      ALLOWED_ORIGINS: ${PROJECT_URL},${PROJECT_URL}:3000,http://localhost:5173,http://127.0.0.1:5173
+      PROJECT_URL: ${PROJECT_URL}
     depends_on:
       db:
         condition: service_healthy
@@ -39,14 +40,12 @@ services:
     build:
       context: ./frontend
       args: # Pass VITE_API_BASE_URL from .env to the build process
-        VITE_API_BASE_URL: ${VITE_API_BASE_URL}
+        VITE_API_BASE_URL: ${PROJECT_URL}:8000
     ports:
       - "3000:80" # Map host port 3000 to container's port 80 (Nginx default)
     environment:
       # Frontend needs to know the backend URL to make API calls
       VITE_API_BASE_URL: http://backend:8000
-    depends_on:
-      - backend # Frontend depends on backend for API calls
 
   code_executor:
     build:

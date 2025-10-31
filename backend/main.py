@@ -21,6 +21,19 @@ origins = [
     "http://127.0.0.1:3000",
 ]
 
+project_url = os.getenv("PROJECT_URL")
+if project_url:
+    # Add the PROJECT_URL and its common variations to allowed origins
+    origins.append(project_url)
+    # Also add variations for local development if PROJECT_URL is localhost or 127.0.0.1
+    if "localhost" in project_url:
+        origins.append(project_url.replace("localhost", "127.0.0.1"))
+    elif "127.0.0.1" in project_url:
+        origins.append(project_url.replace("127.0.0.1", "localhost"))
+
+# Ensure uniqueness of origins
+origins = list(set(origins))
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -34,6 +47,33 @@ app.add_middleware(
 def on_startup():
     models.Base.metadata.create_all(bind=engine)
     load_dotenv() # Load environment variables from .env file
+
+    # Create admin user if not exists
+    admin_email = os.getenv("ADMIN_EMAIL")
+    admin_password = os.getenv("ADMIN_PASSWORD")
+
+    if admin_email and admin_password:
+        db = SessionLocal()
+        try:
+            existing_admin = db.query(models.User).filter(models.User.email == admin_email).first()
+            if not existing_admin:
+                hashed_password = auth.get_password_hash(admin_password)
+                admin_user = models.User(
+                    email=admin_email,
+                    hashed_password=hashed_password,
+                    is_admin=True,
+                    name="Admin"
+                )
+                db.add(admin_user)
+                db.commit()
+                db.refresh(admin_user)
+                print(f"Admin user {admin_email} created successfully!")
+            else:
+                print(f"Admin user {admin_email} already exists.")
+        except Exception as e:
+            print(f"Error creating admin user: {e}")
+        finally:
+            db.close()
 
 @app.get("/")
 async def read_root():

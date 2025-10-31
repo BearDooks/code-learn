@@ -11,6 +11,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy the rest of the application code
 COPY . .
 
+# Make the entrypoint script executable
+RUN chmod +x /app/docker-entrypoint.sh
+
 # Expose the port the app runs on
 EXPOSE 8000
 
