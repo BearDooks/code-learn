@@ -63,8 +63,7 @@ Develop an open-source web application to teach coding skills through interactiv
     *   **Global Loading Indicator:** Implemented for consistent loading feedback across `Login`, `Signup`, `Profile`, and `LessonDetail` components.
     *   **Lesson Detail Page Loading Fix:** Resolved an issue where the loading spinner would persist indefinitely on the Lesson Detail page.
 *   **Initial Lessons:** 10 new introductory lessons have been created and added to the database, covering fundamental programming concepts (printing, variables, arithmetic, strings, input, conditionals, loops, functions, return values).
-*   **Next Immediate Focus:** Implement the actual sandboxed code execution environment on the backend using Docker to address security concerns.
-*   **Backend Code Cleanup:** Removed duplicate FastAPI app initialization, CORS middleware configuration, startup event handlers, and accidental test code.
-*   **CORS Configuration:** Ensured correct CORS configuration in `main.py` to allow requests from the frontend.
-*   **Password Hashing Fix:** Modified `auth.py` to truncate passwords to 72 bytes before hashing with bcrypt, resolving the `ValueError` for long passwords.
-*   **Dependency Management:** Explicitly set `bcrypt==4.0.1` in `backend/requirements.txt` to resolve compatibility issues with `passlib`.
+
+## Next Steps:
+  * Docker desktop has been installed for faster testing
+  * need to run the project locally to troubleshoot issues of auth with backend

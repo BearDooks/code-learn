@@ -45,6 +45,9 @@ Here's an example `.env` file. **Replace placeholder values with your desired se
 # The base URL where your project will be accessed (e.g., http://localhost:3000 or http://192.168.86.20:3000)
 PROJECT_URL=http://localhost:3000
 
+# The external URL for the backend API. Example: http://localhost:8000 or http://192.168.86.20:8000
+BACKEND_EXTERNAL_URL=http://localhost:8000
+
 # --- Database Configuration ---
 POSTGRES_DB=code_learn_db
 POSTGRES_USER=user
@@ -67,9 +70,8 @@ CODE_EXECUTOR_URL=http://code_executor:5000
 ALLOWED_ORIGINS=${PROJECT_URL},${PROJECT_URL}:3000,http://localhost:5173,http://127.0.0.1:5173
 
 # --- Frontend Configuration ---
-# The external URL for the backend API that the frontend will communicate with.
-# Example: http://localhost:8000 or http://192.168.86.20:8000
-BACKEND_EXTERNAL_URL=http://localhost:8000
+# The base URL for the backend API that the frontend will communicate with.
+VITE_API_BASE_URL=${BACKEND_EXTERNAL_URL}
 ```
 
 ### 3. Build and Run with Docker Compose
