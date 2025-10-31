@@ -25,8 +25,11 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)
 
-def get_password_hash(password):
-    return pwd_context.hash(password)
+def get_password_hash(password: str) -> str:
+    # bcrypt has a maximum password length of 72 bytes. Truncate if necessary.
+    # The frontend should ideally prevent this, but this is a safeguard.
+    truncated_password = password.encode('utf-8')[:72].decode('utf-8', 'ignore')
+    return pwd_context.hash(truncated_password)
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     to_encode = data.copy()
