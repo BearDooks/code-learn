@@ -63,12 +63,13 @@ RUN_CREATE_LESSONS=true
 # --- Backend Configuration ---
 # The URL where the code executor service is expected to be running.
 CODE_EXECUTOR_URL=http://code_executor:5000
-# Comma-separated list of allowed origins for CORS. This will be dynamically generated based on PROJECT_URL.
-# ALLOWED_ORIGINS=http://localhost:5173,http://127.0.0.1:5173,http://192.168.86.20:3000,http://127.0.0.1:3000
+# Comma-separated list of allowed origins for CORS. This will be constructed from PROJECT_URL and other defaults.
+ALLOWED_ORIGINS=${PROJECT_URL},${PROJECT_URL}:3000,http://localhost:5173,http://127.0.0.1:5173
 
 # --- Frontend Configuration ---
-# The base URL for the backend API that the frontend will communicate with.
-# VITE_API_BASE_URL=http://localhost:8000
+# The external URL for the backend API that the frontend will communicate with.
+# Example: http://localhost:8000 or http://192.168.86.20:8000
+BACKEND_EXTERNAL_URL=http://localhost:8000
 ```
 
 ### 3. Build and Run with Docker Compose

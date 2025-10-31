@@ -14,25 +14,9 @@ from dotenv import load_dotenv # Import load_dotenv
 
 app = FastAPI()
 
-origins = [
-    "http://localhost:5173",  # Frontend URL
-    "http://127.0.0.1:5173",  # Frontend URL
-    "http://192.168.86.20:3000",
-    "http://127.0.0.1:3000",
-]
-
-project_url = os.getenv("PROJECT_URL")
-if project_url:
-    # Add the PROJECT_URL and its common variations to allowed origins
-    origins.append(project_url)
-    # Also add variations for local development if PROJECT_URL is localhost or 127.0.0.1
-    if "localhost" in project_url:
-        origins.append(project_url.replace("localhost", "127.0.0.1"))
-    elif "127.0.0.1" in project_url:
-        origins.append(project_url.replace("127.0.0.1", "localhost"))
-
-# Ensure uniqueness of origins
-origins = list(set(origins))
+# Read allowed origins from environment variable
+allowed_origins_str = os.getenv("ALLOWED_ORIGINS", "")
+origins = [origin.strip() for origin in allowed_origins_str.split(",") if origin.strip()]
 
 app.add_middleware(
     CORSMiddleware,
