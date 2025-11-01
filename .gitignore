@@ -26,3 +26,5 @@ dist-ssr
 # Project Files
 .env
 project.md
+/__pycache__
+/.pytest_cache
