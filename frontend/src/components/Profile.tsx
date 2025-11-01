@@ -8,17 +8,24 @@ interface Lesson {
   // Add other fields if needed, but for display, id and title are sufficient
 }
 
+interface UserLessonCompletion {
+  lesson_id: number;
+  status: string; // "started", "attempted", "completed"
+  // Add other fields if needed, like last_attempted_code, notes, bookmarked
+}
+
 interface UserProfile {
   email: string;
   name: string | null; // Add name
   is_admin: boolean;
-  lesson_completions: Lesson[]; // Now an array of Lesson objects
+  lesson_completions: UserLessonCompletion[]; // Now an array of Lesson objects
 }
 
 const Profile: React.FC = () => {
   const { isLoggedIn, setGlobalAlert, setIsLoggedIn, setIsAdmin, setGlobalLoading, allLessons } = useAuth();
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const [bookmarkedLessons, setBookmarkedLessons] = useState<Lesson[]>([]); // New state for bookmarked lessons
   const navigate = useNavigate();
 
   // totalLessonsCount will now be derived from allLessons from context
@@ -107,16 +114,16 @@ const Profile: React.FC = () => {
 
   useEffect(() => {
     if (isLoggedIn) {
-      const fetchProfile = async () => {
+      const fetchProfileAndBookmarks = async () => { // Renamed function
         setLoading(true);
-        setGlobalLoading(true); // Show global loading indicator for profile fetch
+        setGlobalLoading(true);
         const token = localStorage.getItem('access_token');
         const tokenType = localStorage.getItem('token_type');
 
         if (!token || !tokenType) {
           setGlobalAlert('Authentication token not found. Please log in.', "danger");
           setLoading(false);
-          setGlobalLoading(false); // Hide loading on auth error
+          setGlobalLoading(false);
           return;
         }
 
@@ -135,16 +142,30 @@ const Profile: React.FC = () => {
           const profileData: UserProfile = await profileResponse.json();
           setUserProfile(profileData);
 
+          // Fetch bookmarked lessons
+          const bookmarkedResponse = await fetch(`${import.meta.env.VITE_API_BASE_URL}/users/me/lessons/bookmarked`, {
+            headers: {
+              'Authorization': `${tokenType} ${token}`,
+            },
+          });
+
+          if (!bookmarkedResponse.ok) {
+            const errorData = await bookmarkedResponse.json();
+            throw new Error(errorData.detail || 'Failed to fetch bookmarked lessons');
+          }
+          const bookmarkedData: Lesson[] = await bookmarkedResponse.json();
+          setBookmarkedLessons(bookmarkedData);
+
         } catch (err: any) {
-          setGlobalAlert(`Error fetching profile data: ${err.message}`, "danger");
+          setGlobalAlert(`Error fetching data: ${err.message}`, "danger"); // Consolidated error message
         } finally {
           setLoading(false);
-          setGlobalLoading(false); // Hide global loading indicator
+          setGlobalLoading(false);
         }
       };
-      fetchProfile();
+      fetchProfileAndBookmarks(); // Call the renamed function
     }
-  }, [isLoggedIn, setIsLoggedIn, setIsAdmin, navigate, setGlobalLoading]); // Removed setGlobalAlert from dependencies
+  }, [isLoggedIn, setIsLoggedIn, setIsAdmin, navigate, setGlobalLoading]);
 
   if (!isLoggedIn) {
     return <div className="alert alert-warning mt-4">Please log in to view your profile.</div>;
@@ -164,7 +185,9 @@ const Profile: React.FC = () => {
     return <div className="alert alert-info mt-4">No profile data available.</div>;
   }
 
-  const completedLessonsCount = userProfile.lesson_completions ? userProfile.lesson_completions.length : 0;
+  const completedLessonsCount = userProfile.lesson_completions
+    ? userProfile.lesson_completions.filter(lc => lc.status === "completed").length
+    : 0;
   const progressPercentage = totalLessonsCount > 0 ? Math.round((completedLessonsCount / totalLessonsCount) * 100) : 0;
 
   return (
@@ -194,17 +217,32 @@ const Profile: React.FC = () => {
           <h6 className="mt-4">Completed Lessons:</h6>
           {userProfile.lesson_completions && userProfile.lesson_completions.length > 0 ? (
             <ul className="list-group">
-              {userProfile.lesson_completions.map((lessonCompletion) => {
-                const fullLesson = allLessons.find(lesson => lesson.id === lessonCompletion.id);
-                return fullLesson ? (
-                  <li key={lessonCompletion.id} className="list-group-item">
-                    {fullLesson.title}
-                  </li>
-                ) : null;
-              })}
+              {userProfile.lesson_completions
+                .filter(lc => lc.status === "completed") // Filter here
+                .map((lessonCompletion) => {
+                  const fullLesson = allLessons.find(lesson => lesson.id === lessonCompletion.lesson_id); // Use lesson_id
+                  return fullLesson ? (
+                    <li key={lessonCompletion.lesson_id} className="list-group-item">
+                      {fullLesson.title}
+                    </li>
+                  ) : null;
+                })}
             </ul>
           ) : (
             <p>No lessons completed yet.</p>
+          )}
+
+          <h6 className="mt-4">Bookmarked Lessons:</h6>
+          {bookmarkedLessons.length > 0 ? (
+            <ul className="list-group">
+              {bookmarkedLessons.map((lesson) => (
+                <li key={lesson.id} className="list-group-item">
+                  {lesson.title}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p>No lessons bookmarked yet.</p>
           )}
 
           <button className="btn btn-danger mt-3 me-2" onClick={handleResetAllProgress}>Reset All Lesson Progress</button>

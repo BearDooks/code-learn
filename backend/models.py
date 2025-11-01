@@ -34,7 +34,12 @@ class UserLessonCompletion(Base):
 
     user_id = Column(Integer, ForeignKey("users.id"), primary_key=True)
     lesson_id = Column(Integer, ForeignKey("lessons.id"), primary_key=True)
-    completed_at = Column(DateTime(timezone=True), server_default=func.now())
+    status = Column(String, default="started") # e.g., "started", "attempted", "completed"
+    last_attempted_code = Column(Text, nullable=True) # Stores the last code submitted, regardless of correctness
+    started_at = Column(DateTime(timezone=True), server_default=func.now())
+    completed_at = Column(DateTime(timezone=True), nullable=True) # Only set on completion
+    notes = Column(Text, nullable=True)  # New field for user notes
+    bookmarked = Column(Boolean, default=False)  # New field for bookmarking
 
     # Relationships to User and Lesson
     user = relationship("User", back_populates="lesson_completions")

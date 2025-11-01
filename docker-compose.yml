@@ -31,6 +31,10 @@ services:
       ALLOWED_ORIGINS: ${PROJECT_URL},${PROJECT_URL}:3000,http://localhost:5173,http://127.0.0.1:5173
       PROJECT_URL: ${PROJECT_URL}
       BACKEND_EXTERNAL_URL: ${BACKEND_EXTERNAL_URL}
+      RUN_CREATE_LESSONS: ${RUN_CREATE_LESSONS}
+      PYTHONUNBUFFERED: 1
+      ADMIN_EMAIL: ${ADMIN_EMAIL}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
     depends_on:
       db:
         condition: service_healthy

@@ -7,11 +7,16 @@ interface Lesson {
   title: string;
 }
 
+interface UserLessonCompletion {
+  lesson_id: number;
+  status: string;
+}
+
 const LessonsList: React.FC = () => {
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [completedLessonIds, setCompletedLessonIds] = useState<Set<number>>(new Set()); // New state for completed lesson IDs
+  const [lessonCompletionStatuses, setLessonCompletionStatuses] = useState<Map<number, string>>(new Map()); // Map lesson ID to its status
   const { isLoggedIn } = useAuth(); // Use useAuth hook
 
   useEffect(() => {
@@ -28,25 +33,27 @@ const LessonsList: React.FC = () => {
         const lessonsData: Lesson[] = await lessonsResponse.json();
         setLessons(lessonsData);
 
-        // Fetch completed lessons if logged in
+        // Fetch all user lesson completions if logged in
         if (isLoggedIn) {
           const token = localStorage.getItem('access_token');
           const tokenType = localStorage.getItem('token_type');
 
           if (token && tokenType) {
-            const completedResponse = await fetch(`${import.meta.env.VITE_API_BASE_URL}/users/me/lessons/completed`, {
+            const allCompletionsResponse = await fetch(`${import.meta.env.VITE_API_BASE_URL}/users/me/lesson-completions`, {
               headers: {
                 'Authorization': `${tokenType} ${token}`,
               },
             });
 
-            if (completedResponse.ok) {
-              const completedData: Lesson[] = await completedResponse.json();
-              const ids = new Set(completedData.map(lesson => lesson.id));
-              setCompletedLessonIds(ids);
+            if (allCompletionsResponse.ok) {
+              const allCompletionsData: UserLessonCompletion[] = await allCompletionsResponse.json();
+              const statusesMap = new Map<number, string>();
+              allCompletionsData.forEach(completion => {
+                statusesMap.set(completion.lesson_id, completion.status);
+              });
+              setLessonCompletionStatuses(statusesMap);
             } else {
-              console.error('Failed to fetch completed lessons:', completedResponse.statusText);
-              // Optionally, handle error for fetching completed lessons
+              console.error('Failed to fetch all lesson completions:', allCompletionsResponse.statusText);
             }
           }
         }
@@ -81,15 +88,29 @@ const LessonsList: React.FC = () => {
       <div className="list-group">
         {lessons.length > 0 ? (
           lessons.map(lesson => {
-            const isCompleted = completedLessonIds.has(lesson.id);
+            const completionStatus = lessonCompletionStatuses.get(lesson.id);
+            const isCompleted = completionStatus === "completed";
+            const isInProgress = completionStatus === "attempted" || completionStatus === "started";
+            
+            let badge = null;
+            let listItemClass = "";
+
+            if (isCompleted) {
+              badge = <span className="badge bg-success rounded-pill">Completed</span>;
+              listItemClass = "list-group-item-success";
+            } else if (isInProgress) {
+              badge = <span className="badge bg-info rounded-pill">In Progress</span>;
+              listItemClass = "list-group-item-info";
+            }
+
             return (
               <Link
                 key={lesson.id}
                 to={`/lessons/${lesson.id}`}
-                className={`list-group-item list-group-item-action d-flex justify-content-between align-items-center ${isCompleted ? 'list-group-item-success' : ''}`}
+                className={`list-group-item list-group-item-action d-flex justify-content-between align-items-center ${listItemClass}`}
               >
                 {lesson.title}
-                {isCompleted && <span className="badge bg-success rounded-pill">Completed</span>}
+                {badge}
               </Link>
             );
           })

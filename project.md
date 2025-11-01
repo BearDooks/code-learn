@@ -32,10 +32,9 @@ Develop an open-source web application to teach coding skills through interactiv
 *   Configure a basic database connection.
 
 ## Future Development Roadmap:
-1.  **User Authentication:** Implement full user signup, login, and profile management with backend integration.
-2.  **Lesson Features & Content:** Develop 2-3 complete, interactive lessons with explanations, code examples, and exercises that can run successfully.
-3.  **Code Editor & Execution:** Enhance the code editor, integrate with the backend for secure code execution, and provide automated feedback/testing.
-4.  **UI/UX Refinement:** Improve the overall visual design, responsiveness, and user experience of the application.
+1.  **Lesson Features & Content:** Develop 2-3 complete, interactive lessons with explanations, code examples, and exercises that can run successfully.
+2.  **Code Editor & Execution:** Enhance the code editor, integrate with the backend for secure code execution, and provide automated feedback/testing.
+3.  **UI/UX Refinement:** Improve the overall visual design, responsiveness, and user experience of the application.
 
 ## Current Progress:
 *   **Frontend Setup:** React with TypeScript, Bootstrap, React Router DOM.
@@ -65,5 +64,38 @@ Develop an open-source web application to teach coding skills through interactiv
 *   **Initial Lessons:** 10 new introductory lessons have been created and added to the database, covering fundamental programming concepts (printing, variables, arithmetic, strings, input, conditionals, loops, functions, return values).
 
 ## Next Steps:
-  * Docker desktop has been installed for faster testing
-  * need to run the project locally to troubleshoot issues of auth with backend
+
+
+## Future Enhancements:
+
+### High Impact / Moderate Complexity:
+
+3.  **Code Editor Enhancements:**
+    *   Ensure correct syntax highlighting configuration for read-only code examples.
+    *   Integrate a linter (e.g., Pylint, Flake8) into the code executor for pre-test feedback on code style and errors.
+    *   Add a "Format Code" button using a tool like Black or Prettier.
+
+4.  **More Robust Code Execution Environment (Security & Scalability):**
+    *   Implement CPU, memory, and time limits for code execution within the `code_executor`.
+    *   Ensure the `code_executor` has no network access.
+    *   Run the code execution process as a non-privileged user.
+
+### Moderate Impact / Moderate Complexity:
+
+5.  **Lesson Categories/Tags:**
+    *   Organize lessons into categories (e.g., "Python Basics," "Data Structures," "Algorithms") or add tags.
+
+6.  **Search Functionality:**
+    *   Implement search for lessons by title, content, or tags.
+
+7.  **User Profiles (More Detail):**
+    *   Allow users to add more information to their profiles (e.g., bio, profile picture, links to social media/GitHub).
+
+### Lower Impact / Easier Complexity:
+
+8.  **"Next Lesson" / "Previous Lesson" Logic Refinement:**
+    *   Refine logic to ensure "Next Lesson" appears only if the current lesson is completed.
+
+9.  **Improved Error Handling & User Feedback:**
+    *   Provide more user-friendly error messages for API failures.
+    *   Enhance the global alert system with more specific messages.

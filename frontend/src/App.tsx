@@ -21,11 +21,21 @@ interface Lesson {
   test_code: string | null;
 }
 
+interface User {
+  id: number;
+  email: string;
+  name: string | null;
+  is_admin: boolean;
+  is_active: boolean;
+}
+
 interface AuthContextType {
   isLoggedIn: boolean;
   isAdmin: boolean;
+  user: User | null; // Add user object
   setIsLoggedIn: (loggedIn: boolean) => void;
   setIsAdmin: (admin: boolean) => void;
+  setUser: (user: User | null) => void; // Add setter for user object
   globalMessage: string | null;
   globalMessageType: 'success' | 'danger' | 'info' | 'warning';
   setGlobalAlert: (message: string, type: 'success' | 'danger' | 'info' | 'warning') => void;
@@ -67,10 +77,20 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, adminOnly = f
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
+  const [user, setUser] = useState<User | null>(null); // Add user state
   const [globalMessage, setGlobalMessage] = useState<string | null>(null);
   const [globalMessageType, setGlobalMessageType] = useState<'success' | 'danger' | 'info' | 'warning'>('info');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [allLessons, setAllLessons] = useState<Lesson[]>([]); // State to hold all lessons
+
+  const handleLogout = () => {
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('token_type');
+    setIsLoggedIn(false);
+    setIsAdmin(false);
+    setUser(null); // Clear user on logout
+    setGlobalAlert('You have been logged out.', 'info');
+  };
 
   const setGlobalAlert = React.useCallback((message: string, type: 'success' | 'danger' | 'info' | 'warning') => {
     setGlobalMessage(message);
@@ -96,25 +116,29 @@ function App() {
         });
 
         if (response.ok) {
-          const userData = await response.json();
+          const userData: User = await response.json(); // Cast to User type
           setIsLoggedIn(true);
           setIsAdmin(userData.is_admin);
+          setUser(userData); // Set user data
         } else {
           // Token might be expired or invalid
           localStorage.removeItem('access_token');
           localStorage.removeItem('token_type');
           setIsLoggedIn(false);
           setIsAdmin(false);
+          setUser(null); // Clear user data
         }
       } catch (error) {
         console.error("Error fetching user status:", error);
         setIsLoggedIn(false);
         setIsAdmin(false);
+        setUser(null); // Clear user data
       }
     }
     else {
       setIsLoggedIn(false);
       setIsAdmin(false);
+      setUser(null); // Clear user data
     }
   };
 
@@ -148,7 +172,7 @@ function App() {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ isLoggedIn, isAdmin, setIsLoggedIn, setIsAdmin, globalMessage, globalMessageType, setGlobalAlert, isLoading, setGlobalLoading, allLessons, setAllLessons }}>
+    <AuthContext.Provider value={{ isLoggedIn, isAdmin, user, setIsLoggedIn, setIsAdmin, setUser, globalMessage, globalMessageType, setGlobalAlert, isLoading, setGlobalLoading, allLessons, setAllLessons }}>
       <Router>
         <div className="d-flex flex-column min-vh-100"> {/* Added flexbox for sticky footer */}
           <nav className="navbar navbar-expand-lg navbar-light bg-light">
@@ -187,6 +211,11 @@ function App() {
                   {isLoggedIn && (
                     <li className="nav-item">
                       <NavLink className="nav-link" to="/profile">Profile</NavLink>
+                    </li>
+                  )}
+                  {isLoggedIn && (
+                    <li className="nav-item">
+                      <button className="nav-link btn btn-link" onClick={handleLogout} style={{ textDecoration: 'none', color: 'inherit' }}>Logout</button>
                     </li>
                   )}
                 </ul>

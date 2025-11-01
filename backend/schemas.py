@@ -51,6 +51,7 @@ class Lesson(BaseModel):
         orm_mode = True
 
 class CodeExecutionRequest(BaseModel):
+    lesson_id: int
     code: str
     language: str = "python" # Default to python
     test_code: Optional[str] = None
@@ -59,17 +60,26 @@ class CodeExecutionResult(BaseModel):
     output: str
     error: Optional[str] = None
     status: str = "success"
+    linter_output: Optional[str] = None # New field for linter output
 
 # New schemas for UserLessonCompletion
 class UserLessonCompletionBase(BaseModel):
     user_id: int
     lesson_id: int
+    notes: Optional[str] = None
+    bookmarked: Optional[bool] = False
 
 class UserLessonCompletionCreate(UserLessonCompletionBase):
-    pass
+    status: str = "started"
+    last_attempted_code: Optional[str] = None
 
 class UserLessonCompletion(UserLessonCompletionBase):
-    completed_at: datetime
+    status: str
+    last_attempted_code: Optional[str] = None
+    started_at: datetime
+    completed_at: Optional[datetime] = None
+    notes: Optional[str] = None
+    bookmarked: Optional[bool] = False
 
     class Config:
         orm_mode = True

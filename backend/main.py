@@ -1,16 +1,23 @@
 from datetime import timedelta
 
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI, Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware # Added this import
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 
 import models, schemas, auth
 from database import get_db, engine, SessionLocal
-from typing import List
+from typing import List, Optional # Import Optional
 import httpx # Import httpx for making HTTP requests
 import os # Import os to read environment variables
 from dotenv import load_dotenv # Import load_dotenv
+from black import format_str, FileMode, NothingChanged # Import black for code formatting
+import subprocess # Add subprocess import
+import tempfile # Add tempfile import
+import asyncio # Add asyncio import
+
+CODE_EXECUTOR_URL = os.getenv("CODE_EXECUTOR_URL") # Define CODE_EXECUTOR_URL here
 
 app = FastAPI()
 
@@ -30,11 +37,12 @@ app.add_middleware(
 @app.on_event("startup")
 def on_startup():
     models.Base.metadata.create_all(bind=engine)
-    load_dotenv() # Load environment variables from .env file
 
     # Create admin user if not exists
     admin_email = os.getenv("ADMIN_EMAIL")
     admin_password = os.getenv("ADMIN_PASSWORD")
+    print(f"Debug: ADMIN_EMAIL = {admin_email}")
+    print(f"Debug: ADMIN_PASSWORD = {admin_password}")
 
     if admin_email and admin_password:
         db = SessionLocal()
@@ -131,8 +139,55 @@ async def update_lesson(lesson_id: int, lesson: schemas.LessonCreate, db: Sessio
     db.refresh(db_lesson)
     return db_lesson
 
-@app.post("/lessons/{lesson_id}/complete", response_model=schemas.UserLessonCompletion)
-async def complete_lesson(
+@app.put("/lessons/{lesson_id}/completion", response_model=schemas.UserLessonCompletion)
+async def update_lesson_completion(
+    lesson_id: int,
+    completion_data: schemas.UserLessonCompletionCreate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    # Check if lesson exists
+    lesson = db.query(models.Lesson).filter(models.Lesson.id == lesson_id).first()
+    if not lesson:
+        raise HTTPException(status_code=404, detail="Lesson not found")
+
+    # Find existing completion record
+    completion = db.query(models.UserLessonCompletion).filter(
+        models.UserLessonCompletion.user_id == current_user.id,
+        models.UserLessonCompletion.lesson_id == lesson_id
+    ).first()
+
+    if completion:
+        # Update existing completion record
+        completion.status = completion_data.status
+        completion.last_attempted_code = completion_data.last_attempted_code
+        completion.notes = completion_data.notes  # Update notes
+        completion.bookmarked = completion_data.bookmarked  # Update bookmarked
+        if completion_data.status == "completed" and not completion.completed_at:
+            completion.completed_at = func.now()
+        elif completion_data.status != "completed":
+            completion.completed_at = None # Clear completed_at if status is not completed
+    else:
+        # Create new completion record
+        completion = models.UserLessonCompletion(
+            user_id=current_user.id,
+            lesson_id=lesson_id,
+            status=completion_data.status,
+            last_attempted_code=completion_data.last_attempted_code,
+            notes=completion_data.notes,  # Set notes
+            bookmarked=completion_data.bookmarked,  # Set bookmarked
+        )
+        if completion_data.status == "completed":
+            completion.completed_at = func.now()
+        db.add(completion)
+
+    db.commit()
+    db.refresh(completion)
+
+    return completion
+
+@app.post("/lessons/{lesson_id}/start", response_model=schemas.UserLessonCompletion)
+async def start_lesson(
     lesson_id: int,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth.get_current_user)
@@ -142,21 +197,24 @@ async def complete_lesson(
     if not lesson:
         raise HTTPException(status_code=404, detail="Lesson not found")
 
-    # Check if already completed
+    # Find existing completion record
     completion = db.query(models.UserLessonCompletion).filter(
         models.UserLessonCompletion.user_id == current_user.id,
         models.UserLessonCompletion.lesson_id == lesson_id
     ).first()
 
-    if completion:
-        raise HTTPException(status_code=400, detail="Lesson already marked as completed by this user.")
-
-    # Create new completion record
-    db_completion = models.UserLessonCompletion(user_id=current_user.id, lesson_id=lesson_id)
-    db.add(db_completion)
-    db.commit()
-    db.refresh(db_completion)
-    return db_completion
+    if not completion:
+        # Create new completion record with status 'started'
+        completion = models.UserLessonCompletion(
+            user_id=current_user.id,
+            lesson_id=lesson_id,
+            status="started"
+        )
+        db.add(completion)
+        db.commit()
+        db.refresh(completion)
+    
+    return completion
 
 @app.delete("/lessons/{lesson_id}/complete")
 async def uncomplete_lesson(
@@ -182,15 +240,38 @@ async def uncomplete_lesson(
     db.commit()
     return {"message": "Lesson marked as incomplete!"}
 
+@app.get("/users/me/lessons/{lesson_id}/code", response_model=Optional[schemas.UserLessonCompletion])
+async def get_user_lesson_completion(
+    lesson_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    completion = db.query(models.UserLessonCompletion).filter(
+        models.UserLessonCompletion.user_id == current_user.id,
+        models.UserLessonCompletion.lesson_id == lesson_id
+    ).first()
+    return completion
+
 @app.get("/users/me/lessons/completed", response_model=List[schemas.Lesson])
 async def get_completed_lessons_for_current_user(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth.get_current_user)
 ):
     completed_lessons = db.query(models.Lesson).join(models.UserLessonCompletion).filter(
-        models.UserLessonCompletion.user_id == current_user.id
+        models.UserLessonCompletion.user_id == current_user.id,
+        models.UserLessonCompletion.status == "success"
     ).all()
     return completed_lessons
+
+@app.get("/users/me/lesson-completions", response_model=List[schemas.UserLessonCompletion])
+async def get_all_user_lesson_completions(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    all_completions = db.query(models.UserLessonCompletion).filter(
+        models.UserLessonCompletion.user_id == current_user.id
+    ).all()
+    return all_completions
 
 @app.delete("/users/me/lessons/completed")
 async def reset_all_lesson_progress(
@@ -280,11 +361,61 @@ async def delete_user_by_id(
     db.commit()
     return {"message": "User deleted successfully!"}
 
+@app.get("/users/me/lessons/bookmarked", response_model=List[schemas.Lesson])
+async def get_bookmarked_lessons_for_current_user(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    bookmarked_lessons = db.query(models.Lesson).join(models.UserLessonCompletion).filter(
+        models.UserLessonCompletion.user_id == current_user.id,
+        models.UserLessonCompletion.bookmarked == True
+    ).all()
+    return bookmarked_lessons
+
+@app.post("/format-code/", response_model=str)
+async def format_code(request: Request, current_user: models.User = Depends(auth.get_current_user)):
+    code = await request.body()
+    code_str = code.decode("utf-8")
+    
+    with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".py") as temp_file:
+        temp_file.write(code_str)
+        temp_file_path = temp_file.name
+
+    try:
+        # Run black as a subprocess on the temporary file
+        process = await asyncio.create_subprocess_exec(
+            "black",
+            temp_file_path,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        stdout, stderr = await process.communicate()
+
+        if process.returncode == 0: # Black ran successfully (no changes or changes made)
+            # Read the formatted code from the temporary file
+            with open(temp_file_path, "r") as f:
+                formatted_code = f.read()
+            return formatted_code
+        elif process.returncode == 1: # Black made changes
+            with open(temp_file_path, "r") as f:
+                formatted_code = f.read()
+            return formatted_code
+        else: # Black encountered an error
+            raise HTTPException(status_code=400, detail=f"Black formatting error: {stderr.decode('utf-8')}")
+    except FileNotFoundError:
+        raise HTTPException(status_code=500, detail="Black formatter not found. Please ensure it is installed.")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Error formatting code: {e}")
+    finally:
+        os.remove(temp_file_path) # Clean up the temporary file
 
 @app.post("/execute-code/", response_model=schemas.CodeExecutionResult)
-async def execute_code(request: schemas.CodeExecutionRequest, current_user: models.User = Depends(auth.get_current_user)):
+async def execute_code(request: schemas.CodeExecutionRequest, db: Session = Depends(get_db), current_user: models.User = Depends(auth.get_current_user)):
     if request.language != "python":
         raise HTTPException(status_code=400, detail="Only Python execution is supported for now.")
+
+    if not CODE_EXECUTOR_URL:
+        raise HTTPException(status_code=500, detail="CODE_EXECUTOR_URL environment variable is not set.")
 
     # Combine user code and test code for execution in the executor service
     code_to_execute = request.code
@@ -298,7 +429,8 @@ async def execute_code(request: schemas.CodeExecutionRequest, current_user: mode
             response = await client.post(
                 f"{CODE_EXECUTOR_URL}/execute",
                 json={
-                    "code": code_to_execute,
+                    "user_code": request.code,
+                    "test_code": request.test_code,
                     "timeout": 10 # Example timeout, can be configurable
                 }
             )
@@ -306,10 +438,45 @@ async def execute_code(request: schemas.CodeExecutionRequest, current_user: mode
             executor_result = response.json()
 
             # Map the executor's result to your schema
-            status_str = "success"
-            if executor_result["returncode"] != 0 or executor_result["stderr"] or executor_result["error"]:
-                status_str = "error"
-            # Further logic can be added here to differentiate between user code error and test failure
+            status_str = "error" # Default to error
+            if executor_result["returncode"] == 0 and not executor_result["stderr"] and not executor_result["error"]:
+                if "Tests passed" in executor_result["stdout"]:
+                    status_str = "success"
+                else:
+                    status_str = "attempted" # Code ran, but tests didn't explicitly pass
+            elif executor_result["returncode"] == 1 and ("AssertionError" in executor_result["stdout"] or "AssertionError" in executor_result["stderr"]):
+                status_str = "attempted" # Code ran, but tests failed due to assertion
+
+
+
+            # Update or create UserLessonCompletion with last attempted code and status
+            completion = db.query(models.UserLessonCompletion).filter(
+                models.UserLessonCompletion.user_id == current_user.id,
+                models.UserLessonCompletion.lesson_id == request.lesson_id
+            ).first()
+
+            if completion:
+                completion.last_attempted_code = request.code
+                completion.status = status_str
+                if status_str == "success":
+                    completion.completed_at = func.now()
+
+            else:
+                completion = models.UserLessonCompletion(
+                    user_id=current_user.id,
+                    lesson_id=request.lesson_id,
+                    last_attempted_code=request.code,
+                    status=status_str,
+                    notes=None,
+                    bookmarked=False
+                )
+                if status_str == "success":
+                    completion.completed_at = func.now()
+                db.add(completion)
+
+            db.commit()
+            db.refresh(completion)
+
 
             return schemas.CodeExecutionResult(
                 output=executor_result["stdout"],

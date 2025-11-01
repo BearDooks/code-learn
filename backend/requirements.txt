@@ -10,3 +10,5 @@ passlib[bcrypt]==1.7.4
 bcrypt==4.0.1
 pydantic==2.5.3
 python-multipart
+flake8 # Added flake8
+black # Added black
