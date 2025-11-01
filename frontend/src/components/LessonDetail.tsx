@@ -193,6 +193,25 @@ const LessonDetail: React.FC = () => {
           setShowCompletionAlert(true);
           setIsLessonCompleted(true); // Mark lesson as completed
           setTimeout(() => setShowCompletionAlert(false), 5000); // Hide alert after 5 seconds
+
+          // Re-fetch completion data to update notes and bookmark status
+          const token = localStorage.getItem('access_token');
+          const tokenType = localStorage.getItem('token_type');
+          if (token && tokenType) {
+            fetch(`${import.meta.env.VITE_API_BASE_URL}/users/me/lessons/${lesson.id}/code`, {
+              headers: {
+                'Authorization': `${tokenType} ${token}`,
+              },
+            })
+            .then(response => response.json())
+            .then((updatedCompletionData: any) => {
+              if (updatedCompletionData) {
+                setUserNotes(updatedCompletionData.notes || '');
+                setIsBookmarked(updatedCompletionData.bookmarked || false);
+              }
+            })
+            .catch(err => console.error("Error re-fetching user lesson completion after update:", err));
+          }
         }
       }
 
